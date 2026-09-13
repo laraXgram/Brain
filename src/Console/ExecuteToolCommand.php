@@ -1,0 +1,87 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LaraGram\Brain\Console;
+
+use LaraGram\Console\Command;
+use LaraGram\Brain\Mcp\ToolRegistry;
+use LaraGram\Mcp\Request;
+use LaraGram\Mcp\Response;
+use LaraGram\Mcp\Server\Tool;
+use Throwable;
+
+class ExecuteToolCommand extends Command
+{
+    protected $signature = 'brain:execute-tool {tool} {arguments}';
+
+    protected $description = 'Execute a Brain MCP tool in isolation (internal command)';
+
+    protected $hidden = true;
+
+    public function handle(): int
+    {
+        $toolClass = $this->argument('tool');
+        $argumentsEncoded = $this->argument('arguments');
+
+        // Validate the tool is registered
+        if (! ToolRegistry::isToolAllowed($toolClass)) {
+            $this->error("Tool not registered or not allowed: {$toolClass}");
+
+            return 1;
+        }
+
+        $decoded = base64_decode($argumentsEncoded, true);
+
+        if ($decoded === false) {
+            $this->error('Invalid arguments encoding.');
+
+            return 1;
+        }
+
+        // Decode arguments
+        $arguments = json_decode($decoded, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->error('Invalid arguments format: '.json_last_error_msg());
+
+            return static::FAILURE;
+        }
+
+        /** @var Tool $tool */
+        $tool = app($toolClass);
+
+        $request = new Request($arguments ?? []);
+
+        ob_start();
+
+        try {
+            /** @var Response $response */
+            $response = $tool->handle($request); // @phpstan-ignore-line
+        } catch (Throwable $throwable) {
+            ob_end_clean();
+
+            $errorResult = Response::error("Tool execution failed (E_THROWABLE): {$throwable->getMessage()}");
+
+            $this->error(json_encode([
+                'isError' => true,
+                'content' => [
+                    $errorResult->content()->toTool($tool),
+                ],
+            ]));
+
+            return static::FAILURE;
+        }
+
+        ob_end_clean();
+
+        echo json_encode([
+            'isError' => $response->isError(),
+            'content' => [
+                $response->content()->toTool($tool),
+            ],
+        ]);
+
+        return static::SUCCESS;
+    }
+}

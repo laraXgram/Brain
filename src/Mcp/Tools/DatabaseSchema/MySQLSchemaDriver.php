@@ -1,0 +1,101 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LaraGram\Brain\Mcp\Tools\DatabaseSchema;
+
+use Exception;
+use LaraGram\Support\Facades\DB;
+
+class MySQLSchemaDriver extends DatabaseSchemaDriver
+{
+    public function getViews(): array
+    {
+        try {
+            return DB::connection($this->connection)->select('
+                SELECT TABLE_NAME as name, VIEW_DEFINITION as definition
+                FROM information_schema.VIEWS
+                WHERE TABLE_SCHEMA = DATABASE()
+            ');
+        } catch (Exception) {
+            return [];
+        }
+    }
+
+    public function getStoredProcedures(): array
+    {
+        try {
+            return DB::connection($this->connection)->select('SHOW PROCEDURE STATUS WHERE Db = DATABASE()');
+        } catch (Exception) {
+            return [];
+        }
+    }
+
+    public function getFunctions(): array
+    {
+        try {
+            return DB::connection($this->connection)->select('SHOW FUNCTION STATUS WHERE Db = DATABASE()');
+        } catch (Exception) {
+            return [];
+        }
+    }
+
+    public function getTriggers(?string $table = null): array
+    {
+        try {
+            if ($this->hasTable($table)) {
+                return DB::connection($this->connection)->select('SHOW TRIGGERS WHERE `Table` = ?', [$table]);
+            }
+
+            return DB::connection($this->connection)->select('SHOW TRIGGERS');
+        } catch (Exception) {
+            return [];
+        }
+    }
+
+    public function getCheckConstraints(string $table): array
+    {
+        $mariaDbConstraints = rescue(fn (): array => DB::connection($this->connection)->select('
+            SELECT CONSTRAINT_NAME, CHECK_CLAUSE
+            FROM information_schema.CHECK_CONSTRAINTS
+            WHERE CONSTRAINT_SCHEMA = DATABASE()
+            AND TABLE_NAME = ?
+        ', [$table]), null, report: false);
+
+        if ($mariaDbConstraints !== null) {
+            return $mariaDbConstraints;
+        }
+
+        // MySQL's CHECK_CONSTRAINTS has no TABLE_NAME column, so the table filter goes through TABLE_CONSTRAINTS.
+        return rescue(fn (): array => DB::connection($this->connection)->select("
+            SELECT cc.CONSTRAINT_NAME, cc.CHECK_CLAUSE
+            FROM information_schema.CHECK_CONSTRAINTS cc
+            JOIN information_schema.TABLE_CONSTRAINTS tc
+                ON tc.CONSTRAINT_SCHEMA = cc.CONSTRAINT_SCHEMA
+                AND tc.CONSTRAINT_NAME = cc.CONSTRAINT_NAME
+            WHERE cc.CONSTRAINT_SCHEMA = DATABASE()
+            AND tc.TABLE_NAME = ?
+            AND tc.CONSTRAINT_TYPE = 'CHECK'
+        ", [$table]), [], report: false);
+    }
+
+    public function getSequences(): array
+    {
+        return [];
+    }
+
+    public function getTables(): array
+    {
+        try {
+            return DB::connection($this->connection)->select("
+                SELECT TABLE_NAME as name
+                FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_TYPE = 'BASE TABLE'
+                ORDER BY TABLE_NAME
+            ");
+        } catch (Exception) {
+            return [];
+        }
+    }
+}

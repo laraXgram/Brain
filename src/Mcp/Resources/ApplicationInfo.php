@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LaraGram\Brain\Mcp\Resources;
+
+use LaraGram\Brain\Mcp\ToolExecutor;
+use LaraGram\Brain\Mcp\Tools\ApplicationInfo as ApplicationInfoTool;
+use LaraGram\Mcp\Response;
+use LaraGram\Mcp\Server\Resource;
+
+class ApplicationInfo extends Resource
+{
+    public function __construct(protected ToolExecutor $toolExecutor)
+    {
+        //
+    }
+
+    /**
+     * The resource's description.
+     */
+    protected string $description = 'Comprehensive application information including PHP version, LaraGram version, database engine, and all installed packages with their versions in the application.';
+
+    /**
+     * The resource's URI.
+     */
+    protected string $uri = 'file://instructions/application-info.md';
+
+    /**
+     * The resource's MIME type.
+     */
+    protected string $mimeType = 'text/markdown';
+
+    /**
+     * Handle the resource request.
+     */
+    public function handle(): Response
+    {
+        $response = $this->toolExecutor->execute(ApplicationInfoTool::class);
+
+        if ($response->isError()) {
+            return $response;
+        }
+
+        $data = json_decode((string) $response->content(), true);
+
+        if (! $data) {
+            return Response::error('Error parsing application information');
+        }
+
+        return Response::json($data);
+    }
+}

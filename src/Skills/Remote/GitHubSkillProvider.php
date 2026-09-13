@@ -1,0 +1,299 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LaraGram\Brain\Skills\Remote;
+
+use LaraGram\Http\Client\Promises\EachPromise;
+use LaraGram\Http\Client\PendingRequest;
+use LaraGram\Support\Collection;
+use LaraGram\Support\Facades\Http;
+use LaraGram\Support\Facades\Log;
+use LaraGram\Support\Str;
+use LaraGram\Brain\Install\SkillWriter;
+use RuntimeException;
+use Throwable;
+
+class GitHubSkillProvider
+{
+    protected ?string $defaultBranch = null;
+
+    /** @var array<string, mixed>|null */
+    protected ?array $cachedTree = null;
+
+    public function __construct(protected GitHubRepository $repository)
+    {
+        //
+    }
+
+    /**
+     * @return Collection<string, RemoteSkill>
+     */
+    public function discoverSkills(): Collection
+    {
+        $tree = $this->fetchRepositoryTree();
+
+        if ($tree === null) {
+            return collect();
+        }
+
+        $prefix = $this->repository->path === '' ? '' : $this->repository->path.'/';
+
+        return collect($tree['tree'])
+            ->filter(function (array $item) use ($prefix): bool {
+                $path = (string) $item['path'];
+
+                // Matching the marker rather than its directory accepts a path that is itself a skill directory.
+                return $item['type'] === 'blob'
+                    && Str::afterLast($path, '/') === 'SKILL.md'
+                    && str_starts_with($path, $prefix)
+                    // A skill is named after its directory, so that directory has to be a usable name.
+                    && SkillWriter::isValidSkillName(self::skillName($path));
+            })
+            ->map(fn (array $item): RemoteSkill => new RemoteSkill(
+                name: self::skillName((string) $item['path']),
+                repo: $this->repository->fullName(),
+                path: self::skillDirectory((string) $item['path']),
+            ))
+            ->keyBy(fn (RemoteSkill $skill): string => $skill->name);
+    }
+
+    protected static function skillName(string $markerPath): string
+    {
+        return Str::afterLast(self::skillDirectory($markerPath), '/');
+    }
+
+    // Repository paths are always slash-delimited, so basename() and dirname() would split on a backslash under Windows.
+    protected static function skillDirectory(string $markerPath): string
+    {
+        return Str::contains($markerPath, '/') ? Str::beforeLast($markerPath, '/') : '';
+    }
+
+    public function downloadSkill(RemoteSkill $skill, string $targetPath): bool
+    {
+        $tree = $this->fetchRepositoryTree();
+
+        if ($tree === null) {
+            return false;
+        }
+
+        $skillFiles = $this->extractSkillFilesFromTree($tree['tree'], $skill->path);
+
+        if ($skillFiles->isEmpty()) {
+            return false;
+        }
+
+        $blobs = $skillFiles->filter(fn (array $item): bool => $item['type'] === 'blob');
+
+        // A tree that escapes the skill directory is malformed or hostile, so nothing from it is worth writing.
+        if ($blobs->contains(fn (array $item): bool => self::escapesSkillDirectory((string) $item['path']))) {
+            return false;
+        }
+
+        $files = $blobs->reject(fn (array $item): bool => preg_match('/\.(php\d?|phar|phtml)$/i', (string) $item['path']) === 1);
+
+        if (! $files->contains(fn (array $item): bool => Str::afterLast((string) $item['path'], '/') === 'SKILL.md')) {
+            return false;
+        }
+
+        if (! $this->ensureDirectoryExists($targetPath)) {
+            return false;
+        }
+
+        return $this->downloadFiles($files->toArray(), $targetPath, $skill->path);
+    }
+
+    protected static function escapesSkillDirectory(string $path): bool
+    {
+        return collect(explode('/', $path))->contains(fn (string $segment): bool => ! SkillWriter::isValidSkillName($segment));
+    }
+
+    /**
+     * @return array{tree: array<int, array<string, mixed>>, sha: string, url: string, truncated: bool}|null
+     *
+     * @throws RuntimeException
+     */
+    protected function fetchRepositoryTree(): ?array
+    {
+        if ($this->cachedTree !== null) {
+            return $this->cachedTree;
+        }
+
+        $url = sprintf(
+            'https://api.github.com/repos/%s/%s/git/trees/%s?recursive=1',
+            $this->repository->owner,
+            $this->repository->repo,
+            urlencode($this->resolveBranch())
+        );
+
+        $response = $this->client()->get($url);
+
+        if ($response->status() === 403) {
+            $rateLimitRemaining = $response->header('X-RateLimit-Remaining');
+            $rateLimitReset = $response->header('X-RateLimit-Reset');
+
+            if ($rateLimitRemaining === '0') {
+                $resetTime = $rateLimitReset
+                    ? date('Y-m-d H:i:s', (int) $rateLimitReset)
+                    : 'unknown';
+
+                throw new RuntimeException(
+                    "GitHub API rate limit exceeded. Rate limit will reset at {$resetTime}. ".
+                    'Configure a GitHub token via brain.github.token or services.github.token for higher limits (5000 req/hr vs 60 req/hr).'
+                );
+            }
+        }
+
+        if ($response->failed()) {
+            $errorMessage = $response->json('message') ?? 'Unknown error';
+
+            throw new RuntimeException(
+                "Failed to fetch repository tree from GitHub: {$errorMessage} (HTTP {$response->status()})"
+            );
+        }
+
+        $tree = $response->json();
+
+        if (! is_array($tree) || ! isset($tree['tree']) || ! is_array($tree['tree'])) {
+            throw new RuntimeException('Invalid response structure from GitHub Tree API');
+        }
+
+        /** @var array<string, mixed> $tree */
+        if (($tree['truncated'] ?? false) === true) {
+            Log::warning('GitHub tree response truncated (>100K entries). Some files may not be visible.', [
+                'repo' => $this->repository->fullName(),
+                'entries' => count($tree['tree']),
+            ]);
+        }
+
+        /** @var array{tree: array<int, array<string, mixed>>, sha: string, url: string, truncated: bool} $tree */
+        $this->cachedTree = $tree;
+
+        return $tree;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $tree
+     * @return Collection<int, array<string, mixed>>
+     */
+    protected function extractSkillFilesFromTree(array $tree, string $skillPath): Collection
+    {
+        $prefix = $skillPath.'/';
+
+        return collect($tree)
+            ->filter(fn (array $item): bool => str_starts_with((string) $item['path'], $prefix))
+            ->values();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $files
+     */
+    protected function downloadFiles(array $files, string $targetPath, string $basePath): bool
+    {
+        $fileUrls = collect($files)->mapWithKeys(fn (array $item): array => [
+            $item['path'] => $this->buildRawFileUrl($item['path']),
+        ]);
+
+        $responses = [];
+
+        $generator = (function () use ($fileUrls) {
+            foreach ($fileUrls as $path => $url) {
+                yield $path => $this->client(60)->async()->get($url);
+            }
+        })();
+
+        (new EachPromise($generator, [
+            'concurrency' => 25,
+            'fulfilled' => static function ($response, $path) use (&$responses): void {
+                $responses[$path] = $response;
+            },
+            'rejected' => static function ($reason, $path) use (&$responses): void {
+                $responses[$path] = $reason;
+            },
+        ]))->promise()->wait();
+
+        foreach ($files as $item) {
+            $response = $responses[$item['path']] ?? null;
+
+            if ($response instanceof Throwable || $response === null || $response->failed()) {
+                return false;
+            }
+
+            $localPath = $targetPath.'/'.substr((string) $item['path'], strlen($basePath) + 1);
+
+            if (! $this->ensureDirectoryExists(dirname($localPath))) {
+                return false;
+            }
+
+            if (file_put_contents($localPath, $response->body()) === false) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    protected function buildRawFileUrl(string $path): string
+    {
+        return sprintf(
+            'https://raw.githubusercontent.com/%s/%s/%s/%s',
+            $this->repository->owner,
+            $this->repository->repo,
+            $this->resolveBranch(),
+            ltrim($path, '/')
+        );
+    }
+
+    protected function ensureDirectoryExists(string $path): bool
+    {
+        return is_dir($path) || @mkdir($path, 0755, true);
+    }
+
+    protected function client(int $timeout = 30): PendingRequest
+    {
+        $headers = [
+            'Accept' => 'application/vnd.github.v3+json',
+            'User-Agent' => 'LaraGram-Brain',
+        ];
+
+        $token = $this->getGitHubToken();
+
+        if ($token !== null) {
+            $headers['Authorization'] = "Bearer {$token}";
+        }
+
+        return Http::withHeaders($headers)->timeout($timeout);
+    }
+
+    protected function resolveBranch(): string
+    {
+        if ($this->repository->branch !== '') {
+            return $this->repository->branch;
+        }
+
+        if ($this->defaultBranch !== null) {
+            return $this->defaultBranch;
+        }
+
+        $url = sprintf(
+            'https://api.github.com/repos/%s/%s',
+            $this->repository->owner,
+            $this->repository->repo
+        );
+
+        $response = $this->client(timeout: 15)->get($url);
+
+        $branch = $response->successful()
+            ? $response->json('default_branch')
+            : null;
+
+        $this->defaultBranch = is_string($branch) ? $branch : 'main';
+
+        return $this->defaultBranch;
+    }
+
+    protected function getGitHubToken(): ?string
+    {
+        return config('brain.github.token') ?? config('services.github.token');
+    }
+}

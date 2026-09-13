@@ -1,0 +1,338 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LaraGram\Brain\Mcp\Tools;
+
+use Closure;
+use Exception;
+use LaraGram\Contracts\JsonSchema\JsonSchema;
+use LaraGram\JsonSchema\Types\Type;
+use LaraGram\Support\Arr;
+use LaraGram\Support\Facades\Cache;
+use LaraGram\Support\Facades\DB;
+use LaraGram\Support\Facades\Log;
+use LaraGram\Support\Facades\Schema;
+use LaraGram\Support\Str;
+use LaraGram\Brain\Mcp\Tools\DatabaseSchema\SchemaDriverFactory;
+use LaraGram\Mcp\Request;
+use LaraGram\Mcp\Response;
+use LaraGram\Mcp\Server\Tool;
+use LaraGram\Mcp\Server\Tools\Annotations\IsReadOnly;
+
+#[IsReadOnly]
+class DatabaseSchema extends Tool
+{
+    /**
+     * The tool's description.
+     */
+    protected string $description = 'Read the database schema for this application. Returns table names, columns, indexes, and foreign keys. Use "summary" mode first to get an overview (table names with column types only), then call again without "summary" and with a "filter" to get full details for specific tables. Params: "summary" (default false) - returns only table names and column types; "database" - connection name; "filter" - substring match on table names; "include_column_details" (default false) - adds nullable, default, auto_increment, comments; "include_views" (default false); "include_routines" (default false) - stored procedures, functions, sequences.';
+
+    /**
+     * Get the tool's input schema.
+     *
+     * @return array<string, Type>
+     */
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'summary' => $schema->boolean()
+                ->description('Return only table names and their column types. Use this first to understand the database structure, then request full details for specific tables using "filter". Defaults to false.'),
+            'database' => $schema->string()
+                ->description("Name of the database connection to dump (defaults to app's default connection, often not needed)"),
+            'filter' => $schema->string()
+                ->description('Filter tables by name (substring match).'),
+            'include_views' => $schema->boolean()
+                ->description('Include database views. Defaults to false.'),
+            'include_routines' => $schema->boolean()
+                ->description('Include stored procedures, functions, and sequences. Defaults to false.'),
+            'include_column_details' => $schema->boolean()
+                ->description('Include full column metadata (nullable, default, auto_increment, comments, generation). Defaults to false.'),
+        ];
+    }
+
+    /**
+     * Handle the tool request.
+     */
+    public function handle(Request $request): Response
+    {
+        $summary = $request->get('summary', false);
+        $connection = $request->get('database') ?? config('database.default');
+        $filter = $request->get('filter') ?? '';
+        $includeViews = $request->get('include_views', false);
+        $includeRoutines = $request->get('include_routines', false);
+        $includeColumnDetails = $request->get('include_column_details', false);
+
+        $cacheKey = sprintf(
+            'brain:mcp:database-schema:%s:%s:%d:%d:%d:%d',
+            $connection,
+            $filter,
+            (int) $summary,
+            (int) $includeViews,
+            (int) $includeRoutines,
+            (int) $includeColumnDetails
+        );
+
+        $schema = rescue(
+            fn () => Cache::remember($cacheKey, 20, fn (): array => $this->getDatabaseStructure(
+                $connection,
+                $filter,
+                $summary,
+                $includeViews,
+                $includeRoutines,
+                $includeColumnDetails
+            )),
+            fn (): array => $this->getDatabaseStructure($connection, $filter, $summary, $includeViews, $includeRoutines, $includeColumnDetails),
+            report: false
+        );
+
+        return Response::json($schema);
+    }
+
+    /**
+     * @return array{engine: string, tables: array<string, mixed>, views?: array<mixed>, routines?: array{stored_procedures: array<mixed>, functions: array<mixed>, sequences: array<mixed>}}
+     */
+    protected function getDatabaseStructure(
+        ?string $connection,
+        string $filter = '',
+        bool $summary = false,
+        bool $includeViews = false,
+        bool $includeRoutines = false,
+        bool $includeColumnDetails = false
+    ): array {
+        $result = [
+            'engine' => DB::connection($connection)->getDriverName(),
+            'tables' => $this->withoutTablePrefix($connection, fn (): array => $summary
+                ? $this->getAllTableColumnTypes($connection, $filter)
+                : $this->getAllTablesStructure($connection, $filter, $includeColumnDetails)),
+        ];
+
+        if (! $summary) {
+            $driver = SchemaDriverFactory::make($connection);
+
+            if ($includeViews) {
+                $result['views'] = $driver->getViews();
+            }
+
+            if ($includeRoutines) {
+                $result['routines'] = [
+                    'stored_procedures' => $driver->getStoredProcedures(),
+                    'functions' => $driver->getFunctions(),
+                    'sequences' => $driver->getSequences(),
+                ];
+            }
+        }
+
+        return $this->stripTablePrefix($connection, $result);
+    }
+
+    /**
+     * Report names as the application writes them, since Eloquent and the query builder re-apply the prefix.
+     *
+     * @param  array<string, mixed>  $result
+     * @return array<string, mixed>
+     */
+    protected function stripTablePrefix(?string $connection, array $result): array
+    {
+        $prefix = DB::connection($connection)->getTablePrefix();
+
+        if ($prefix === '') {
+            return $result;
+        }
+
+        $strip = fn (string $name): string => Str::replaceStart($prefix, '', $name);
+
+        $tables = [];
+
+        foreach ($result['tables'] as $name => $structure) {
+            if (is_array($structure['foreign_keys'] ?? null)) {
+                foreach ($structure['foreign_keys'] as $index => $foreignKey) {
+                    $structure['foreign_keys'][$index]['foreign_table'] = $strip($foreignKey['foreign_table']);
+                }
+            }
+
+            $tables[$strip((string) $name)] = $structure;
+        }
+
+        $result['tables'] = $tables;
+
+        foreach ($result['views'] ?? [] as $key => $view) {
+            foreach (['name', 'viewname'] as $field) {
+                if (is_string($name = data_get($view, $field))) {
+                    data_set($result['views'][$key], $field, $strip($name));
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    protected function getAllTablesStructure(?string $connection, string $filter = '', bool $includeColumnDetails = false): array
+    {
+        $structures = [];
+
+        foreach ($this->getAllTables($connection) as $table) {
+            $tableName = is_object($table) ? $table->name : ($table['name'] ?? '');
+
+            if ($filter !== '' && ! str_contains(strtolower($tableName), strtolower($filter))) {
+                continue;
+            }
+
+            $structures[$tableName] = $this->getTableStructure($connection, $tableName, $includeColumnDetails);
+        }
+
+        return $structures;
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    protected function getAllTableColumnTypes(?string $connection, string $filter = ''): array
+    {
+        $tables = [];
+
+        foreach ($this->getAllTables($connection) as $table) {
+            $tableName = is_object($table) ? $table->name : ($table['name'] ?? '');
+
+            if ($filter !== '' && ! str_contains(strtolower($tableName), strtolower($filter))) {
+                continue;
+            }
+
+            $tables[$tableName] = collect(Schema::connection($connection)->getColumns($tableName))
+                ->pluck('type', 'name')
+                ->all();
+        }
+
+        return $tables;
+    }
+
+    /**
+     * Schema drivers read the catalog, so table names arrive with the connection prefix already applied.
+     *
+     * @template TReturn
+     *
+     * @param  Closure(): TReturn  $callback
+     * @return TReturn
+     */
+    protected function withoutTablePrefix(?string $connection, Closure $callback): mixed
+    {
+        $db = DB::connection($connection);
+        $prefix = $db->getTablePrefix();
+
+        if ($prefix === '') {
+            return $callback();
+        }
+
+        $db->setTablePrefix('');
+
+        try {
+            return $callback();
+        } finally {
+            $db->setTablePrefix($prefix);
+        }
+    }
+
+    /**
+     * @return array<int, object|array<string, mixed>>
+     */
+    protected function getAllTables(?string $connection): array
+    {
+        return SchemaDriverFactory::make($connection)->getTables();
+    }
+
+    protected function getTableStructure(?string $connection, string $tableName, bool $includeColumnDetails = false): array
+    {
+        $driver = SchemaDriverFactory::make($connection);
+
+        try {
+            $columns = $this->getTableColumns($connection, $tableName, $includeColumnDetails);
+            $indexes = $this->getTableIndexes($connection, $tableName);
+            $foreignKeys = $this->getTableForeignKeys($connection, $tableName);
+            $triggers = $driver->getTriggers($tableName);
+            $checkConstraints = $driver->getCheckConstraints($tableName);
+
+            return [
+                'columns' => $columns,
+                'indexes' => $indexes,
+                'foreign_keys' => $foreignKeys,
+                'triggers' => $triggers,
+                'check_constraints' => $checkConstraints,
+            ];
+        } catch (Exception $exception) {
+            Log::error('Failed to get table structure for: '.$tableName, [
+                'error' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
+            ]);
+
+            return [
+                'error' => 'Failed to get structure: '.$exception->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * @return array<string, array{type: string, nullable?: bool, default?: mixed, auto_increment?: bool, comment?: string, generation?: array<string, mixed>}>
+     */
+    protected function getTableColumns(?string $connection, string $tableName, bool $includeColumnDetails = false): array
+    {
+        $schema = Schema::connection($connection);
+        $columnDetails = [];
+
+        foreach ($schema->getColumns($tableName) as $column) {
+            $detail = ['type' => $column['type']];
+
+            if ($includeColumnDetails) {
+                $detail['nullable'] = $column['nullable'];
+                $detail['default'] = $column['default'];
+                $detail['auto_increment'] = $column['auto_increment'];
+
+                if ($column['comment'] !== null && $column['comment'] !== '') {
+                    $detail['comment'] = $column['comment'];
+                }
+
+                if ($column['generation'] !== null) {
+                    $detail['generation'] = $column['generation'];
+                }
+            }
+
+            $columnDetails[$column['name']] = $detail;
+        }
+
+        return $columnDetails;
+    }
+
+    /**
+     * @return array<string, array{columns: mixed, type: mixed, is_unique: bool, is_primary: bool}>
+     */
+    protected function getTableIndexes(?string $connection, string $tableName): array
+    {
+        try {
+            $indexDetails = [];
+
+            foreach (Schema::connection($connection)->getIndexes($tableName) as $index) {
+                $indexDetails[$index['name']] = [
+                    'columns' => Arr::get($index, 'columns'),
+                    'type' => Arr::get($index, 'type'),
+                    'is_unique' => Arr::get($index, 'unique', false),
+                    'is_primary' => Arr::get($index, 'primary', false),
+                ];
+            }
+
+            return $indexDetails;
+        } catch (Exception) {
+            return [];
+        }
+    }
+
+    protected function getTableForeignKeys(?string $connection, string $tableName): array
+    {
+        try {
+            return Schema::connection($connection)->getForeignKeys($tableName);
+        } catch (Exception) {
+            return [];
+        }
+    }
+}
