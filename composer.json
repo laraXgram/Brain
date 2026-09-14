@@ -1,0 +1,58 @@
+{
+    "name": "laraxgram/brain",
+    "description": "LaraGram Brain accelerates AI-assisted development by providing the essential context and structure that AI needs to generate high-quality, LaraGram-specific code.",
+    "keywords": [
+        "dev",
+        "laragram",
+        "ai"
+    ],
+    "homepage": "https://github.com/laraxgram/brain",
+    "license": "MIT",
+    "support": {
+        "issues": "https://github.com/laraxgram/brain/issues",
+        "source": "https://github.com/laraxgram/brain"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "/home/amirhossein/Desktop/LaraGram/mcp",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "type": "path",
+            "url": "/home/amirhossein/Desktop/LaraGram/Brain",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "laraxgram/core": "^4",
+        "laraxgram/mcp": "*",
+        "ext-ctype": "*",
+        "laraxgram/brain": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "LaraGram\\Brain\\": "src/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.x-dev"
+        },
+        "laragram": {
+            "providers": [
+                "LaraGram\\Brain\\BrainServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
