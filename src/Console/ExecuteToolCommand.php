@@ -79,7 +79,7 @@ class ExecuteToolCommand extends Command
 
         ob_end_clean();
 
-        echo json_encode($this->serialize($tool, $response));
+        echo json_encode($this->serialize($tool, $response), JSON_INVALID_UTF8_SUBSTITUTE);
 
         return static::SUCCESS;
     }

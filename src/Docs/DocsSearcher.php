@@ -163,7 +163,7 @@ class DocsSearcher
 
     protected static function truncate(string $block, int $length): string
     {
-        $cut = substr($block, 0, $length);
+        $cut = mb_strcut($block, 0, $length, 'UTF-8');
 
         // Don't leave a code fence open.
         if (substr_count($cut, '```') % 2 === 1) {
