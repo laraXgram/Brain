@@ -54,7 +54,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Any skills listed here will not be installed or synced to your agents
-    | by brain:install and brain:update, e.g. "fluxui-development". Your
+    | by brain:install and brain:update, e.g. "luna-react-development". Your
     | own skills within the ".ai/skills" directory are never excluded.
     |
     */
@@ -84,12 +84,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Tinker Tool
+    |--------------------------------------------------------------------------
+    |
+    | The "tinker" MCP tool lets agents run PHP code in the application's
+    | context through "php laragram tinker". It is only registered when
+    | this option is enabled and the tinker command is available.
+    |
+    */
+
+    'tinker_tool_enabled' => env('BRAIN_TINKER_TOOL_ENABLED', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Brain Browser Logs Watcher
     |--------------------------------------------------------------------------
     |
     | The following option may be used to enable or disable the browser logs
     | watcher feature within LaraGram Brain. The log watcher will read any
-    | errors within the browser's console to give Brain better context.
+    | errors within the browser's console (including Telegram Mini Apps
+    | served by Luna) to give Brain better context.
     |
     */
 
