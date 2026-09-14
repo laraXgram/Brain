@@ -6,7 +6,8 @@
 
 - Luna builds single-page frontends (React, Vue, or Svelte) on top of LaraGram's web routes and controllers, and is the way to build Telegram Mini Apps. There is one router (LaraGram's): controllers return `Luna::render('Users/Show', $props)` instead of a Blade view, and pages live in `{{ $assist->luna()->pagesDirectory() }}`.
 - ALWAYS use `search-docs` for Luna APIs (`packages: ['laraxgram/luna']`); Luna is a LaraGram package and its API differs from other SPA adapters you may know.
-- Share global props in the Luna middleware (`{{ $assist->commanderCommand('luna:middleware') }}` generates it) or with `Luna::share()`. Use `Luna::defer()`, `Luna::optional()`, `Luna::merge()`, `Luna::always()`, `Luna::once()`, and `Luna::scroll()` for lazy or partial props, and `Route::luna('/about', 'About')` for pages without a controller.
+- IMPORTANT: Activate `luna-development` when writing controllers or routes that render Luna pages, props, shared data, redirects, the Luna middleware, SSR, or `config/luna.php`.
+- Share global props in the Luna middleware (`{{ $assist->commanderCommand('luna:middleware HandleLunaRequests') }}` generates it) or with `Luna::share()`. Use `Luna::defer()`, `Luna::optional()`, `Luna::merge()`, `Luna::always()`, `Luna::once()`, and `Luna::scroll()` for lazy or partial props, and `Route::luna('/about', 'About')` for pages without a controller.
 - Validation errors from `$request->validate()` and form requests are shared with the page automatically; redirect back after a successful `post`/`put`/`delete` instead of returning JSON.
 @if($assist->hasPackage(\LaraGram\Brain\Support\PackageRegistry::LUNA_REACT))
 - IMPORTANT: Activate `luna-react-development` when working with Luna React pages, forms, or navigation.

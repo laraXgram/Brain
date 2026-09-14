@@ -49,13 +49,18 @@ Cross-cutting changes often need more than one rule file.
 | Collections, lazy iteration, bulk operations | [`rules/collections.md`](rules/collections.md) |
 | Blade components, attributes, composers | [`rules/blade-views.md`](rules/blade-views.md) |
 | Environment values and application configuration | [`rules/config.md`](rules/config.md) |
+| Guards (bot, web session, Mini App `telegram`, API tokens), web login, linking Telegram and web accounts | [`rules/authentication.md`](rules/authentication.md) |
+| Translation files, per-update locale, locale in jobs and broadcasts | [`rules/localization.md`](rules/localization.md) |
+| Disks, Telegram file downloads and uploads, web uploads | [`rules/files-and-storage.md`](rules/files-and-storage.md) |
+| API resources, web / cursor / Telegram pagination | [`rules/resources-and-pagination.md`](rules/resources-and-pagination.md) |
 | Naming, helpers, file boundaries, PHP style | [`rules/style.md`](rules/style.md) |
 | Actions, services, dependencies, application structure | [`rules/architecture.md`](rules/architecture.md) |
 | Listens, keyboards, Temple8 templates, conversations, steps | the `bot-development` skill |
+| Console commands, prompts, schedules, processes | the `commander-development` skill |
 
 ## Decision Rules
 
 - Prefer framework features and existing application abstractions over new helpers or dependencies.
 - Avoid speculative abstractions. Extract code when it creates a clear domain boundary or removes meaningful duplication.
 - Keep database access out of Blade views and Temple8 templates, and prevent hidden N+1 queries across listens, controllers, resources, jobs, and serialization.
-- Keep webhook updates fast: answer the user, then queue slow work.
+- Keep bot handlers short: each update runs in its own process or Surge task worker, so queue slow work.

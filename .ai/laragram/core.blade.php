@@ -79,6 +79,11 @@ These were detected in the existing code; follow them unless the user asks other
 - When generating links to other pages, prefer named routes and the `route()` function. For bot listens, name them (`->name()`) and redirect between them with `to_listen()`.
 @endscoped
 
+## Commander, Scheduling and Processes
+
+- Activate `commander-development` when creating or changing console commands, closure commands in `listens/console.php`, prompts, scheduled tasks, or shell processes.
+- Scheduled tasks, jobs, and commands have no incoming update: `chat()`, `user()`, and `Auth::user()` are `null` there, so pass chat ids and the bot connection explicitly.
+
 ## Vite Error
 
 - If you receive a "Unable to locate file in Vite manifest" error, you can run `{{ $assist->nodePackageManagerCommand('run build') }}` or ask the user to run `{{ $assist->nodePackageManagerCommand('run dev') }}` or `{{ $assist->composerCommand('run dev') }}`.
