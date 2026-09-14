@@ -16,6 +16,7 @@ use LaraGram\Brain\Skills\Remote\AuditResult;
 use LaraGram\Brain\Skills\Remote\GitHubRepository;
 use LaraGram\Brain\Skills\Remote\GitHubSkillProvider;
 use LaraGram\Brain\Skills\Remote\RemoteSkill;
+use LaraGram\Brain\Skills\Remote\Risk;
 use LaraGram\Brain\Skills\Remote\SkillAuditor;
 use LaraGram\Console\Prompts\Terminal;
 use RuntimeException;
@@ -171,10 +172,6 @@ class AddSkillCommand extends Command
             return self::SUCCESS;
         }
 
-        if (! $this->runAuditBeforeInstall($skillsToInstall)) {
-            return self::SUCCESS;
-        }
-
         $results = $this->downloadSkills($skillsToInstall);
 
         if ($results['installedNames'] !== []) {
@@ -270,35 +267,64 @@ class AddSkillCommand extends Command
     }
 
     /**
+     * Download the skills into a staging directory, audit them locally and install the accepted ones.
+     *
      * @param  Collection<string, RemoteSkill>  $skills
      * @return array{installedNames: array<int, string>, failedDetails: array<string, string>}
      */
     protected function downloadSkills(Collection $skills): array
     {
-        return spin(
-            callback: fn (): array => $this->addSkills($skills),
-            message: 'Downloading skills...'
-        );
+        $staging = storage_path('framework'.DIRECTORY_SEPARATOR.'brain'.DIRECTORY_SEPARATOR.'skills-'.Str::random(8));
+
+        try {
+            ['downloaded' => $downloaded, 'failedDetails' => $failed] = spin(
+                callback: fn (): array => $this->stageSkills($skills, $staging),
+                message: 'Downloading skills...'
+            );
+
+            if ($downloaded === [] || ! $this->runAuditBeforeInstall($downloaded)) {
+                return ['installedNames' => [], 'failedDetails' => $failed];
+            }
+
+            $installed = [];
+
+            foreach ($downloaded as $name => $directory) {
+                $skill = $skills->get($name);
+                $targetPath = $this->skillTargetPath($skill);
+
+                if ($this->skillExists($skill)) {
+                    File::deleteDirectory($targetPath);
+                }
+
+                File::ensureDirectoryExists(dirname($targetPath));
+
+                if (File::moveDirectory($directory, $targetPath)) {
+                    $installed[] = $name;
+                } else {
+                    $failed[$name] = 'Could not move the skill into '.$this->defaultSkillsPath;
+                }
+            }
+
+            return ['installedNames' => $installed, 'failedDetails' => $failed];
+        } finally {
+            File::deleteDirectory($staging);
+        }
     }
 
     /**
      * @param  Collection<string, RemoteSkill>  $skills
-     * @return array{installedNames: array<int, string>, failedDetails: array<string, string>}
+     * @return array{downloaded: array<string, string>, failedDetails: array<string, string>}
      */
-    protected function addSkills(Collection $skills): array
+    protected function stageSkills(Collection $skills, string $staging): array
     {
-        $results = ['installedNames' => [], 'failedDetails' => []];
+        $results = ['downloaded' => [], 'failedDetails' => []];
 
         foreach ($skills as $skill) {
-            $targetPath = $this->skillTargetPath($skill);
-
-            if ($this->skillExists($skill)) {
-                File::deleteDirectory($targetPath);
-            }
+            $directory = $staging.DIRECTORY_SEPARATOR.$skill->name;
 
             try {
-                if ($this->fetcher->downloadSkill($skill, $targetPath)) {
-                    $results['installedNames'][] = $skill->name;
+                if ($this->fetcher->downloadSkill($skill, $directory)) {
+                    $results['downloaded'][$skill->name] = $directory;
                 } else {
                     $results['failedDetails'][$skill->name] = 'Download failed';
                 }
@@ -311,21 +337,18 @@ class AddSkillCommand extends Command
     }
 
     /**
-     * @param  Collection<string, RemoteSkill>  $selectedSkills
+     * @param  array<string, string>  $downloaded  skill name => staged directory
      */
-    protected function runAuditBeforeInstall(Collection $selectedSkills): bool
+    protected function runAuditBeforeInstall(array $downloaded): bool
     {
         if ($this->option('skip-audit')) {
             return true;
         }
 
-        $skillNames = $selectedSkills->keys()->values()->all();
+        $skillNames = array_keys($downloaded);
 
         /** @var array<string, array<int, AuditResult>> $auditResults */
-        $auditResults = spin(
-            callback: fn (): array => $this->auditSkills($selectedSkills),
-            message: 'Running security audit...',
-        );
+        $auditResults = (new SkillAuditor)->auditDirectories($downloaded);
 
         if (! $this->hasRiskySkills($auditResults)) {
             return true;
@@ -338,30 +361,6 @@ class AddSkillCommand extends Command
         }
 
         return confirm('Do you want to install these skills?');
-    }
-
-    /**
-     * @param  Collection<string, RemoteSkill>  $skills
-     * @return array<string, array<int, AuditResult>>
-     */
-    protected function auditSkills(Collection $skills): array
-    {
-        $auditor = new SkillAuditor;
-        $results = [];
-
-        $parentOf = fn (RemoteSkill $skill): string => Str::contains($skill->path, '/')
-            ? Str::beforeLast($skill->path, '/')
-            : '';
-
-        // The audit service resolves a skill as source + '/' + name, so each skill has to be sent under its own parent.
-        foreach ($skills->groupBy($parentOf) as $parent => $group) {
-            $source = $this->repository->fullName().($parent === '' ? '' : '/'.$parent);
-            $names = $group->map(fn (RemoteSkill $skill): string => $skill->name)->all();
-
-            $results = [...$results, ...$auditor->audit($source, $names)];
-        }
-
-        return $results;
     }
 
     /**
@@ -397,6 +396,16 @@ class AddSkillCommand extends Command
 
         note('Security Audit');
         table($headers, $rows);
+
+        foreach ($auditResults as $skillName => $results) {
+            foreach ($results as $result) {
+                foreach ($result->findings as $finding) {
+                    if ($finding['risk']->weight() >= Risk::Medium->weight()) {
+                        $this->line("  {$skillName}/{$finding['file']}: {$finding['reason']} ({$finding['risk']->label()})");
+                    }
+                }
+            }
+        }
     }
 
     /**
