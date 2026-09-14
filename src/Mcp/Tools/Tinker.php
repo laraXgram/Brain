@@ -19,14 +19,18 @@ class Tinker extends Tool
     /**
      * The tool's description.
      */
-    protected string $description = 'Execute PHP code in the LaraGram application context, like artisan tinker. Use this for debugging issues, checking if functions exist, and testing code snippets. You should not create models directly without explicit user approval. Prefer Unit/Feature tests using factories for functionality testing. Prefer existing artisan commands over custom tinker code.';
+    protected string $description = 'Execute PHP code in the LaraGram application context, like `php laragram tinker`. Use this for debugging issues, checking if functions exist, and testing code snippets. Do not create or change records without explicit user approval, and never send real Telegram API calls from here unless the user asks. Prefer existing Commander commands over custom tinker code.';
 
     /**
      * Determine whether the tool should be registered with the MCP server.
      */
     public function shouldRegister(): bool
     {
-        return (bool) config('brain.tinker_tool_enabled', false);
+        if (! config('brain.tinker_tool_enabled', true)) {
+            return false;
+        }
+
+        return rescue(fn (): bool => array_key_exists('tinker', Commander::all()), false, report: false);
     }
 
     /**

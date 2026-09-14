@@ -17,8 +17,6 @@ enum Approach: string
     case ValidationFormRequest = 'validation-form-request';
     case CommandAttributeSyntax = 'command-attribute-syntax';
     case CommandPropertySyntax = 'command-property-syntax';
-    case NotificationNotify = 'notification-notify';
-    case NotificationFacade = 'notification-facade';
     case AuthorizationGate = 'authorization-gate';
     case AuthorizationUserCan = 'authorization-user-can';
     case AuthorizationTrait = 'authorization-trait';

@@ -92,6 +92,7 @@ class BrainServiceProvider extends ServiceProvider
                 Console\AddSkillCommand::class,
                 Console\ListSkillCommand::class,
                 Console\ScanCommand::class,
+                Console\DocsCommand::class,
             ]);
         }
     }
