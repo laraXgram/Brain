@@ -14,23 +14,23 @@ use LaraGram\Console\Command\Command as CommandAlias;
 use LaraGram\Console\Output\BufferedOutput;
 use Throwable;
 
-class Tinker extends Tool
+class Probe extends Tool
 {
     /**
      * The tool's description.
      */
-    protected string $description = 'Execute PHP code in the LaraGram application context, like `php laragram tinker`. Use this for debugging issues, checking if functions exist, and testing code snippets. Do not create or change records without explicit user approval, and never send real Telegram API calls from here unless the user asks. Prefer existing Commander commands over custom tinker code.';
+    protected string $description = 'Execute PHP code in the LaraGram application context, like `php laragram probe`. Use this for debugging issues, checking if functions exist, and testing code snippets. Do not create or change records without explicit user approval, and never send real Telegram API calls from here unless the user asks. Prefer existing Commander commands over custom probe code.';
 
     /**
      * Determine whether the tool should be registered with the MCP server.
      */
     public function shouldRegister(): bool
     {
-        if (! config('brain.tinker_tool_enabled', true)) {
+        if (! config('brain.probe_tool_enabled', true)) {
             return false;
         }
 
-        return rescue(fn (): bool => array_key_exists('tinker', Commander::all()), false, report: false);
+        return rescue(fn (): bool => array_key_exists('probe', Commander::all()), false, report: false);
     }
 
     /**
@@ -57,7 +57,7 @@ class Tinker extends Tool
         $output = new BufferedOutput;
 
         try {
-            $exitCode = Commander::call('tinker', [
+            $exitCode = Commander::call('probe', [
                 '--execute' => $code,
                 '--no-ansi' => true,
                 '--no-interaction' => true,
@@ -67,7 +67,7 @@ class Tinker extends Tool
         }
 
         if ($exitCode !== CommandAlias::SUCCESS) {
-            return Response::text('Failed to execute tinker: '.$output->fetch());
+            return Response::text('Failed to execute probe: '.$output->fetch());
         }
 
         return Response::text(trim($output->fetch()));

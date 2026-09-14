@@ -8,7 +8,7 @@ LaraGram's encryption services provide a simple, convenient interface for encryp
 <a name="configuration"></a>
 ## Configuration
 
-Before using LaraGram's encrypter, you must set the `key` configuration option in your `config/app.php` configuration file. This configuration value is driven by the `APP_KEY` environment variable. You should use the `php artisan key:generate` command to generate this variable's value since the `key:generate` command will use PHP's secure random bytes generator to build a cryptographically secure key for your application. Typically, the value of the `APP_KEY` environment variable will be generated for you during [LaraGram's installation](/v4/installation).
+Before using LaraGram's encrypter, you must set the `key` configuration option in your `config/app.php` configuration file. This configuration value is driven by the `APP_KEY` environment variable. You should use the `php laragram key:generate` command to generate this variable's value since the `key:generate` command will use PHP's secure random bytes generator to build a cryptographically secure key for your application. Typically, the value of the `APP_KEY` environment variable will be generated for you during [LaraGram's installation](/v4/installation).
 
 <a name="gracefully-rotating-encryption-keys"></a>
 ### Gracefully Rotating Encryption Keys

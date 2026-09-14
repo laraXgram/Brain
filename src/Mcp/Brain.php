@@ -17,7 +17,7 @@ use LaraGram\Brain\Mcp\Tools\LastError;
 use LaraGram\Brain\Mcp\Tools\ReadLogEntries;
 use LaraGram\Brain\Mcp\Tools\RecordRule;
 use LaraGram\Brain\Mcp\Tools\SearchDocs;
-use LaraGram\Brain\Mcp\Tools\Tinker;
+use LaraGram\Brain\Mcp\Tools\Probe;
 use LaraGram\Mcp\Schema\Icon;
 use LaraGram\Mcp\Server;
 use LaraGram\Mcp\Server\Prompt;
@@ -108,7 +108,7 @@ class Brain extends Server
             ReadLogEntries::class,
             RecordRule::class,
             SearchDocs::class,
-            Tinker::class,
+            Probe::class,
         ], 'tools');
     }
 

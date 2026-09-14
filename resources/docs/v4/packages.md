@@ -308,7 +308,7 @@ If your package contains anonymous components, they must be placed within a `com
 <x-surge::alert />
 ```
 
-<a name="about-artisan-command"></a>
+<a name="about-commander-command"></a>
 ### "About" Commander Command
 
 LaraGram's built-in `about` Commander command provides a synopsis of the application's environment and configuration. Packages may push additional information to this command's output via the `AboutCommand` class. Typically, this information may be added from your package service provider's `boot` method:

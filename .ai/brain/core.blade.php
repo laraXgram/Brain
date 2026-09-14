@@ -8,7 +8,7 @@
 
 - LaraGram Brain is an MCP server with tools designed specifically for this application. Prefer Brain tools over manual alternatives like shell commands or file reads.
 - Use `application-info` at the start of a task to learn the installed LaraGram packages and their versions.
-- Use `database-query` to run read-only queries against the database instead of writing raw SQL in tinker.
+- Use `database-query` to run read-only queries against the database instead of writing raw SQL in probe.
 - Use `database-schema` to inspect table structure before writing migrations or models.
 - Use `last-error` and `read-log-entries` to read recent application errors, for example after sending the bot a test update.
 - Use `get-absolute-url` to resolve the correct scheme, domain, and port for project URLs (web routes, webhook URLs, Mini App URLs). Always use this before sharing a URL with the user.
@@ -48,11 +48,11 @@
 - Read configuration values using dot notation: `{{ $assist->commanderCommand('config:show bot.default') }}`, `{{ $assist->commanderCommand('config:show database.default') }}`. Or read config files directly from the `config/` directory.
 - Inspect the webhook with `{{ $assist->commanderCommand('webhook:info') }}`. Only run `webhook:set`, `webhook:delete`, or `webhook:drop` when the user asks, because they change the live bot.
 
-## Tinker
+## Probe
 
-- Execute PHP in the application context for debugging and exploring code. Do not create or change records without user approval, and do not call Telegram API methods from tinker unless asked. Prefer existing Commander commands over custom tinker code.
-@if($assist->hasMcpEnabled() && config('brain.tinker_tool_enabled', true))
-- Use the `tinker` MCP tool (when it is available) to execute PHP code instead of the CLI. It avoids shell escaping issues and runs the snippet in the LaraGram application context.
+- Execute PHP in the application context for debugging and exploring code. Do not create or change records without user approval, and do not call Telegram API methods from probe unless asked. Prefer existing Commander commands over custom probe code.
+@if($assist->hasMcpEnabled() && config('brain.probe_tool_enabled', true))
+- Use the `probe` MCP tool (when it is available) to execute PHP code instead of the CLI. It avoids shell escaping issues and runs the snippet in the LaraGram application context.
 @endif
-- On the command line, always use single quotes to prevent shell expansion: `{{ $assist->commanderCommand("tinker --execute 'Your::code();'") }}`
-  - Double quotes for PHP strings inside: `{{ $assist->commanderCommand("tinker --execute 'User::where(\"status\", \"active\")->count();'") }}`
+- On the command line, always use single quotes to prevent shell expansion: `{{ $assist->commanderCommand("probe --execute 'Your::code();'") }}`
+  - Double quotes for PHP strings inside: `{{ $assist->commanderCommand("probe --execute 'User::where(\"status\", \"active\")->count();'") }}`

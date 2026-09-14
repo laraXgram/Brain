@@ -84,16 +84,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Tinker Tool
+    | Probe Tool
     |--------------------------------------------------------------------------
     |
-    | The "tinker" MCP tool lets agents run PHP code in the application's
-    | context through "php laragram tinker". It is only registered when
-    | this option is enabled and the tinker command is available.
+    | The "probe" MCP tool lets agents run PHP code in the application's
+    | context through "php laragram probe". It is only registered when
+    | this option is enabled and the probe command is available.
     |
     */
 
-    'tinker_tool_enabled' => env('BRAIN_TINKER_TOOL_ENABLED', true),
+    'probe_tool_enabled' => env('BRAIN_TINKER_TOOL_ENABLED', true),
 
     /*
     |--------------------------------------------------------------------------

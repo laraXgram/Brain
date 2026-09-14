@@ -45,7 +45,7 @@ If you would like to view an overview of your scheduled tasks and the next time 
 php laragram schedule:list
 ```
 
-<a name="scheduling-artisan-commands"></a>
+<a name="scheduling-commander-commands"></a>
 ### Scheduling Commander Commands
 
 In addition to scheduling closures, you may also schedule [Commander commands](/v4/commander) and system commands. For example, you may use the `command` method to schedule an Commander command using either the command's name or class.
@@ -61,7 +61,7 @@ Schedule::command('emails:send Taylor --force')->daily();
 Schedule::command(SendEmailsCommand::class, ['Taylor', '--force'])->daily();
 ```
 
-<a name="scheduling-artisan-closure-commands"></a>
+<a name="scheduling-commander-closure-commands"></a>
 #### Scheduling Commander Closure Commands
 
 If you want to schedule an Commander command defined by a closure, you may chain the scheduling related methods after the command's definition:
