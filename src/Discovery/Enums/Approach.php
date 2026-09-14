@@ -26,4 +26,14 @@ enum Approach: string
     case ModelUuidKeys = 'model-uuid-keys';
     case ModelUlidKeys = 'model-ulid-keys';
     case ModelIncrementingKeys = 'model-incrementing-keys';
+    case ListenActionClosure = 'listen-action-closure';
+    case ListenActionController = 'listen-action-controller';
+    case UpdateAccessHelpers = 'update-access-helpers';
+    case UpdateAccessRequest = 'update-access-request';
+    case KeyboardBuilder = 'keyboard-builder';
+    case KeyboardArray = 'keyboard-array';
+    case ReplyTemplate = 'reply-template';
+    case ReplyDirect = 'reply-direct';
+    case MultiStepConversation = 'multi-step-conversation';
+    case MultiStepStepManager = 'multi-step-step-manager';
 }

@@ -7,11 +7,16 @@ namespace LaraGram\Brain\Discovery\Detectors;
 use LaraGram\Brain\Discovery\ApproachResult;
 use LaraGram\Brain\Discovery\Detectors\Approaches\AuthorizationStyle;
 use LaraGram\Brain\Discovery\Detectors\Approaches\AuthRetrievalStyle;
+use LaraGram\Brain\Discovery\Detectors\Approaches\BotUpdateAccess;
 use LaraGram\Brain\Discovery\Detectors\Approaches\CommandSignatureSyntax;
 use LaraGram\Brain\Discovery\Detectors\Approaches\Convention;
 use LaraGram\Brain\Discovery\Detectors\Approaches\EnumCasing;
+use LaraGram\Brain\Discovery\Detectors\Approaches\KeyboardStyle;
+use LaraGram\Brain\Discovery\Detectors\Approaches\ListenActionStyle;
 use LaraGram\Brain\Discovery\Detectors\Approaches\MassAssignment;
 use LaraGram\Brain\Discovery\Detectors\Approaches\ModelKeyStyle;
+use LaraGram\Brain\Discovery\Detectors\Approaches\MultiStepFlow;
+use LaraGram\Brain\Discovery\Detectors\Approaches\ReplyStyle;
 use LaraGram\Brain\Discovery\Detectors\Approaches\ValidationStyle;
 use LaraGram\Brain\Discovery\Detectors\Approaches\ValidationSyntax;
 use LaraGram\Brain\Discovery\Support\SourceFiles;
@@ -45,6 +50,11 @@ class ApproachDetector
             new AuthorizationStyle,
             new AuthRetrievalStyle,
             new ModelKeyStyle,
+            new ListenActionStyle,
+            new BotUpdateAccess,
+            new KeyboardStyle,
+            new ReplyStyle,
+            new MultiStepFlow,
         ];
     }
 

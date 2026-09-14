@@ -68,6 +68,28 @@ class SourceFiles
         return $files;
     }
 
+    /**
+     * The PHP files of the application's listen directory (bot, client and console listens).
+     *
+     * @return list<string>
+     */
+    public function listens(): array
+    {
+        $directory = $this->basePath.'listens';
+
+        return $this->filesBySubpath['#listens'] ??= is_dir($directory) ? $this->phpFilesIn(realpath($directory) ?: $directory) : [];
+    }
+
+    /**
+     * The application's PHP files together with its listen files.
+     *
+     * @return list<string>
+     */
+    public function botCode(): array
+    {
+        return array_values(array_unique([...$this->php(), ...$this->listens()]));
+    }
+
     public function contents(string $path): string
     {
         return is_file($path) ? ((string) @file_get_contents($path)) : '';

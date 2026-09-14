@@ -41,6 +41,26 @@ class Luna
         return $this->gte('0.1.0');
     }
 
+    /**
+     * Determine if the application serves Telegram Mini Apps (a "telegram" auth guard or the telegram middleware).
+     */
+    public function usesTma(): bool
+    {
+        foreach ((array) config('auth.guards', []) as $guard) {
+            if (is_array($guard) && ($guard['driver'] ?? null) === 'telegram') {
+                return true;
+            }
+        }
+
+        foreach (glob(base_path('routes').DIRECTORY_SEPARATOR.'*.php') ?: [] as $file) {
+            if (preg_match('/[\'"]telegram(?::[^\'"]*)?[\'"]/', (string) file_get_contents($file)) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function pagesDirectory(): string
     {
         $jsPath = base_path('resources/js');

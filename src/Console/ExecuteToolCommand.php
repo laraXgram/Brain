@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace LaraGram\Brain\Console;
 
-use LaraGram\Console\Command;
 use LaraGram\Brain\Mcp\ToolRegistry;
+use LaraGram\Console\Command;
 use LaraGram\Mcp\Request;
 use LaraGram\Mcp\Response;
+use LaraGram\Mcp\ResponseFactory;
 use LaraGram\Mcp\Server\Tool;
+use LaraGram\Mcp\Support\ValidationMessages;
+use LaraGram\Validation\ValidationException;
 use Throwable;
 
 class ExecuteToolCommand extends Command
@@ -48,16 +51,17 @@ class ExecuteToolCommand extends Command
             return static::FAILURE;
         }
 
-        /** @var Tool $tool */
-        $tool = app($toolClass);
+        $tool = ToolRegistry::resolve($toolClass);
 
         $request = new Request($arguments ?? []);
 
         ob_start();
 
         try {
-            /** @var Response $response */
+            /** @var Response|ResponseFactory $response */
             $response = $tool->handle($request); // @phpstan-ignore-line
+        } catch (ValidationException $exception) {
+            $response = Response::error(ValidationMessages::from($exception));
         } catch (Throwable $throwable) {
             ob_end_clean();
 
@@ -75,13 +79,21 @@ class ExecuteToolCommand extends Command
 
         ob_end_clean();
 
-        echo json_encode([
-            'isError' => $response->isError(),
-            'content' => [
-                $response->content()->toTool($tool),
-            ],
-        ]);
+        echo json_encode($this->serialize($tool, $response));
 
         return static::SUCCESS;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function serialize(Tool $tool, Response|ResponseFactory $response): array
+    {
+        $factory = $response instanceof ResponseFactory ? $response : new ResponseFactory($response);
+
+        return $factory->mergeStructuredContent([
+            'isError' => $factory->responses()->contains(fn (Response $response): bool => $response->isError()),
+            'content' => $factory->responses()->map(fn (Response $response): array => $response->content()->toTool($tool))->all(),
+        ]);
     }
 }

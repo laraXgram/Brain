@@ -14,6 +14,9 @@ class Npm
     /** @var array<int, string> */
     public const FIRST_PARTY_PACKAGES = [
         'laragram-precognition',
+        'laragram-precognition-alpine',
+        'laragram-precognition-react',
+        'laragram-precognition-vue',
         'laragram-vite-plugin',
     ];
 

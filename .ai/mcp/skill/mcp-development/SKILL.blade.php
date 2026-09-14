@@ -163,6 +163,8 @@ When the server's capabilities enable `listChanged`, clients may hold a `subscri
 
 ## MCP Apps
 
+IMPORTANT: Read `references/app.md` before building or changing an MCP App; it covers `<x-mcp::app>`, the `createMcpApp` client API, `#[AppMeta]` (CSP, permissions, libraries), visibility, host theming, Luna apps, and common patterns.
+
 Generate apps with `make:mcp-app-resource`, register them in `$resources`, and render with `Response::view(...)`. Link a tool with `#[RendersApp(resource: AppResource::class)]`, and configure CSP, permissions, and libraries with `#[AppMeta]`. For a React, Vue, or Svelte app, extend `LaraGram\Mcp\Luna\LunaAppResource` and build the single-file bundle with the `lunaMcpApp()` Vite plugin from `@laraxgram/vite`.
 
 ## Running and Debugging

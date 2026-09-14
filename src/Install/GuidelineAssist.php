@@ -6,7 +6,10 @@ namespace LaraGram\Brain\Install;
 
 use LaraGram\Support\Collection;
 use LaraGram\Support\Str;
+use LaraGram\Brain\Discovery\Enums\Approach;
+use LaraGram\Brain\Install\Assists\Bot;
 use LaraGram\Brain\Install\Assists\Luna;
+use LaraGram\Brain\Install\Assists\MTProto;
 use LaraGram\Brain\Discovery\Enums\JsPackageManager;
 use LaraGram\Brain\Discovery\ProjectManager;
 use LaraGram\Support\Finder\Finder;
@@ -93,6 +96,36 @@ class GuidelineAssist
     public function luna(): Luna
     {
         return new Luna($this->project);
+    }
+
+    public function bot(): Bot
+    {
+        return new Bot;
+    }
+
+    public function mtproto(): MTProto
+    {
+        return new MTProto($this->project);
+    }
+
+    /**
+     * The Surge server ("swoole", "openswoole", "roadrunner", "frankenphp") when Surge is configured.
+     */
+    public function surgeServer(): ?string
+    {
+        $server = config('surge.server');
+
+        return is_string($server) && $server !== '' ? $server : null;
+    }
+
+    /**
+     * Determine if the application's code predominantly follows the given approach.
+     *
+     * @param  Approach|array<int, Approach>  $approach
+     */
+    public function usesApproach(Approach|array $approach): bool
+    {
+        return rescue(fn (): bool => $this->project->approaches()->uses($approach), false, report: false);
     }
 
     public function hasPackage(string $package, ?string $constraint = null): bool

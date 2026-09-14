@@ -5,11 +5,17 @@ declare(strict_types=1);
 namespace LaraGram\Brain\Mcp;
 
 use DirectoryIterator;
+use LaraGram\Mcp\Server\Tool;
+use LaraGram\Mcp\Telegram\BotRuntime;
+use Throwable;
 
 class ToolRegistry
 {
     /** @var array<int, class-string>|null */
     private static ?array $cachedTools = null;
+
+    /** @var array<class-string, Tool>|null */
+    private static ?array $cachedToolsetTools = null;
 
     /**
      * Get all available tools based on the discovery logic from Brain server.
@@ -38,6 +44,13 @@ class ToolRegistry
             }
         }
 
+        // Add the tools built by package toolsets
+        foreach (array_keys(self::toolsetTools()) as $toolClass) {
+            if (! in_array($toolClass, $excludedTools, true)) {
+                $tools[] = $toolClass;
+            }
+        }
+
         // Add extra tools from configuration
         $extraTools = config('brain.mcp.tools.include', []);
 
@@ -50,6 +63,43 @@ class ToolRegistry
         self::$cachedTools = $tools;
 
         return $tools;
+    }
+
+    /**
+     * Get the tool instances built by package toolsets, keyed by their class.
+     *
+     * Toolset tools receive their toolset through the constructor, so they are
+     * rebuilt from the same toolset in the tool subprocess instead of the container.
+     *
+     * @return array<class-string, Tool>
+     */
+    public static function toolsetTools(): array
+    {
+        if (self::$cachedToolsetTools !== null) {
+            return self::$cachedToolsetTools;
+        }
+
+        $tools = [];
+
+        if (config('brain.bot_runtime_tools', true) && class_exists(BotRuntime::class)) {
+            try {
+                foreach (BotRuntime::tools()->all() as $tool) {
+                    $tools[$tool::class] = $tool;
+                }
+            } catch (Throwable) {
+                //
+            }
+        }
+
+        return self::$cachedToolsetTools = $tools;
+    }
+
+    /**
+     * Resolve the tool instance for the given tool class.
+     */
+    public static function resolve(string $toolClass): Tool
+    {
+        return self::toolsetTools()[$toolClass] ?? app($toolClass);
     }
 
     /**
@@ -66,6 +116,7 @@ class ToolRegistry
     public static function clearCache(): void
     {
         self::$cachedTools = null;
+        self::$cachedToolsetTools = null;
     }
 
     /**

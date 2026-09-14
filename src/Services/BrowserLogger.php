@@ -98,6 +98,17 @@ class BrowserLogger
         return JSON.stringify(toSafeValue(obj, new WeakSet()));
     }
 
+    // Telegram Mini App context (platform, client version) when the page runs inside Telegram
+    function telegramContext() {
+        try {
+            const webApp = window.Telegram && window.Telegram.WebApp;
+            if (!webApp || !webApp.initData) return null;
+            return { platform: webApp.platform, version: webApp.version, colorScheme: webApp.colorScheme };
+        } catch (e) {
+            return null;
+        }
+    }
+
     // Normalize log type for consistency (e.g., 'warn' to 'warning')
     function normalizeType(type) {
         return type === 'warn' ? 'warning' : type;
@@ -156,7 +167,8 @@ class BrowserLogger
                         }
                     }),
                     url: window.location.href,
-                    userAgent: navigator.userAgent
+                    userAgent: navigator.userAgent,
+                    telegram: telegramContext()
                 });
 
                 scheduleFlush();
@@ -186,7 +198,8 @@ class BrowserLogger
                         } : null
                     }],
                     url: window.location.href,
-                    userAgent: navigator.userAgent
+                    userAgent: navigator.userAgent,
+                    telegram: telegramContext()
                 });
 
                 scheduleFlush();
@@ -225,7 +238,8 @@ class BrowserLogger
                     } : null
                 }],
                 url: window.location.href,
-                userAgent: navigator.userAgent
+                userAgent: navigator.userAgent,
+                telegram: telegramContext()
             });
 
             scheduleFlush();
@@ -250,7 +264,8 @@ class BrowserLogger
                     reason: toSafeValue(event.reason, new WeakSet())
                 }],
                 url: window.location.href,
-                userAgent: navigator.userAgent
+                userAgent: navigator.userAgent,
+                telegram: telegramContext()
             });
 
             scheduleFlush();

@@ -1,6 +1,6 @@
 ---
 name: deploying-laragram
-description: "Deploys and operates LaraGram applications in production. Use when the user wants to deploy a LaraGram bot, web app, or Telegram Mini App; configure Nginx or PHP-FPM for LaraGram; switch a bot from local development to a production webhook; run LaraGram Surge; set up queue workers, the scheduler, or MTProto client sessions under a process supervisor; optimize caches (config, events, listens, views); set up multiple bot connections or a self-hosted Bot API server; or debug a bot that stopped responding after deployment."
+description: "Deploys and operates LaraGram applications in production. Use when the user wants to deploy a LaraGram bot, web app, or Telegram Mini App; configure Nginx or PHP-FPM for LaraGram; switch a bot from local development to a production webhook; run LaraGram Surge; set up queue workers, the scheduler, or MTProto client sessions under a process supervisor; optimize caches (config, events, routes, listens, views, templates); set up multiple bot connections or a self-hosted Bot API server; or debug a bot that stopped responding after deployment."
 license: MIT
 metadata:
   author: laraxgram
@@ -54,10 +54,10 @@ With Surge, proxy requests to the Surge port (9000 by default) instead of PHP-FP
 ```bash
 composer install --no-dev --optimize-autoloader
 php laragram migrate --force
-php laragram optimize          # config, events, listens, and views caches
+php laragram optimize          # config, events, routes, listens, views, and templates caches
 npm ci && npm run build        # only when the app has a web frontend or Luna
 php laragram queue:restart     # workers pick up the new code
-php laragram surge:reload      # only when using Surge
+php laragram surge:reload      # only when using Surge (restart the Surge server instead when the MTProto pump or other Surge processes changed)
 ```
 
 Remember that `config:cache` stops `.env` from being read at runtime: only call `env()` inside `config/` files.
@@ -102,9 +102,10 @@ Add one program for `php laragram surge:start` when using Surge, and one for `ph
 
 | Symptom | Check |
 | --- | --- |
-| Bot does not respond | `webhook:info` last error; HTTPS certificate; `APP_DEBUG=false` hiding an exception in `storage/logs` |
-| Updates handled twice or out of order | Slow handlers causing Telegram retries: reply fast and queue slow work |
+| Bot does not respond | `webhook:info` last error (delivery problems only); HTTPS certificate; handler exceptions in `storage/logs`, because updates are processed after Telegram's request is answered (PHP-FPM backgrounds each update with `php`, so the CLI `php` binary must work for the web server user) |
+| Server overloaded during bursts | Every update starts a background process (PHP-FPM) or uses a task worker (Surge): queue slow work, and prefer Surge for high traffic |
 | Conversations or steps forget state | The cache store is `array` or `file` across servers; use `redis` |
 | `429 Too Many Requests` | Enable anti-flood with a shared store and pace broadcasts with `antiFloodWith()` |
-| New listens not picked up | Run `php laragram listen:clear` / `optimize`, and `surge:reload` under Surge |
+| New listens not picked up | Run `php laragram listen:clear` / `optimize`, and `surge:reload` under Surge (restart Surge when the listens belong to MTProto sessions) |
+| Template changes not visible | `php laragram template:clear` (or `optimize:clear`) after deploying template edits without `optimize` |
 | MTProto session stopped | Session not authorized on the server (`client:auth`), or another process uses the same session |

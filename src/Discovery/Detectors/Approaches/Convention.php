@@ -58,6 +58,60 @@ abstract class Convention
     }
 
     /**
+     * Elect a style by file over an explicit list of files.
+     *
+     * @param  list<string>  $paths
+     * @param  callable(string): (array<string, int>|null)  $counts
+     */
+    protected function electByFiles(SourceFiles $files, array $paths, callable $counts): ?ApproachResult
+    {
+        $tally = [];
+        $voters = [];
+
+        foreach ($paths as $path) {
+            $fileCounts = $counts($files->contents($path));
+            $winner = $fileCounts === null ? null : $this->fileVote($fileCounts);
+
+            if ($winner === null) {
+                continue;
+            }
+
+            $tally[$winner] = ($tally[$winner] ?? 0) + 1;
+            $voters[] = $path;
+        }
+
+        return $this->dominant($tally, $voters);
+    }
+
+    /**
+     * Elect a style by counting every occurrence in the given files, for code that lives in few files (listens).
+     *
+     * @param  list<string>  $paths
+     * @param  callable(string): array<string, int>  $counts
+     */
+    protected function electByOccurrence(SourceFiles $files, array $paths, callable $counts): ?ApproachResult
+    {
+        $tally = [];
+        $voters = [];
+
+        foreach ($paths as $path) {
+            $fileCounts = array_filter($counts($files->contents($path)), fn (int $count): bool => $count > 0);
+
+            if ($fileCounts === []) {
+                continue;
+            }
+
+            foreach ($fileCounts as $approach => $count) {
+                $tally[$approach] = ($tally[$approach] ?? 0) + $count;
+            }
+
+            $voters[] = $path;
+        }
+
+        return $this->dominant($tally, $voters);
+    }
+
+    /**
      * @param  array<string, int>  $counts  approach value => occurrences within one file
      */
     protected function fileVote(array $counts): ?string

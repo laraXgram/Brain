@@ -436,6 +436,11 @@ class InstallCommand extends Command
             $this->config->setPackages($this->selectedThirdPartyPackages->values()->toArray());
         }
 
+        // A non-interactive install (scripts, CI) configures the detected agents; remember them for brain:update.
+        if ($explicitMode && $this->config->getAgents() === [] && $this->selectedAgents->isNotEmpty()) {
+            $this->config->setAgents($this->selectedAgents->map(fn (Agent $agent): string => $agent->name())->values()->toArray());
+        }
+
         if ($this->selectedBrainFeatures->contains('guidelines')) {
             $this->config->setGuidelines(true);
         }

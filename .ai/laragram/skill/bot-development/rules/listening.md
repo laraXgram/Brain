@@ -68,7 +68,7 @@ Define global constraints with `Bot::pattern('id', '[0-9]+')` in `AppServiceProv
 
 ## Listen Model Binding
 
-Type-hint a model whose variable name matches the parameter to resolve it automatically (`{order}` → `Order $order`). Use `{post:slug}` for another column, `scopeBindings()` for nested models, and `missing()` to handle records that don't exist. Always check that the resolved model belongs to the current user before acting on it.
+Type-hint a model whose variable name matches the parameter to resolve it automatically (`{order}` → `Order $order`). Use `{post:slug}` for another column, `scopeBindings()` for nested models, `withTrashed()` for soft-deleted records, and enums (`{status}` → `OrderStatus $status`) for backed enum cases. When no record matches, the listen does not run and nothing is sent to the user, so attach `->missing(fn (Request $request) => ...)` to reply (for example with `answerCallbackQuery`). Always check that the resolved model belongs to the current user before acting on it.
 
 ## Named Listens and Redirects
 

@@ -1,6 +1,6 @@
 ---
 name: mtproto-development
-description: "Develops Telegram MTProto clients with laraxgram/mtproto in LaraGram. Activate when writing or changing MTProto listeners (Client::onText, Client::onCommand, Client::incomming/outgoing, Client::forSessions, listens/client.php), ClientRequest replies (sendMessage with peer, sendPhoto, markAsRead, namespaced API like $request->messages->..., invoke()), sessions and authentication (client:auth, session:list, session:import, session:encrypt), running clients (client:start, the Surge-hosted pump), config/mtproto.php (sessions, stores, rate_limit, pacing, flood control), sending from jobs or controllers (Client::session, ClientManager::invoker), channels, participants, media downloads, or ban-safety for userbots."
+description: "Develops Telegram MTProto clients with laraxgram/mtproto in LaraGram. Activate when writing or changing MTProto listeners (Client::onText, Client::onCommand, Client::incomming/outgoing, Client::forSessions, listens/client.php, session-bound bot listen files), ClientRequest replies (sendMessage with peer, sendPhoto with path, sendAlbum, editMessage, markAsRead, the namespaced API like $request->messages->..., invoke()), chats and channels (banChatMember, promoteChatMember, iterateDialogs, iterateHistory, iterateParticipants, invite links, forum topics), media uploads and downloads, stories, reactions, secret chats, takeout, sessions and authentication (client:auth, session:list, session:import, session:encrypt), running clients (client:start, the Surge-hosted pump), config/mtproto.php (sessions, stores, transport, device, rate_limit, pacing, surge.isolation, rpc), sending from jobs, controllers or web requests (Client::session, ClientManager::invoker), or ban-safety for userbots."
 license: MIT
 metadata:
   author: laraxgram
@@ -8,78 +8,36 @@ metadata:
 
 # MTProto Development
 
-MTProto lets the application act as a Telegram client: a user account ("userbot") or a bot over MTProto, with capabilities the Bot API lacks (full history, large files, dialogs, channel administration, hundreds of update types). Everything runs through LaraGram idioms — the `Client` facade, listen files, and `ClientRequest`. Use `search-docs` with `packages: ['laraxgram/mtproto']` for exact method names and parameters.
+MTProto lets the application act as a real Telegram client: a user account ("userbot") or a bot over MTProto, with capabilities the Bot API lacks (full history, dialogs, large files, channel administration, stories, secret chats, hundreds of update types). It is written with LaraGram idioms — the `Client` facade, listen files, middleware, steps, and `LaraGram\MTProto\Foundation\ClientRequest`. Use `search-docs` with `packages: ['laraxgram/mtproto']` for exact method names and parameters.
 
 ## Safety First
 
-- A session is a logged-in account. Treat `storage` session files, `API_ID`, and `API_HASH` as secrets; never print, commit, or copy them.
-- Never run `client:auth`, `session:import`, `session:encrypt`/`decrypt`, or log out a session without the user's explicit request.
-- Userbots can be banned for automated behavior. Keep `rate_limit` enabled, consider `pacing` for long-lived userbots, and never write loops that message many users or join many chats without the user's explicit request.
-- Two processes must not use the same session at once. When the pump runs (under Surge or `client:start`), other processes must go through the pump (see "Calling MTProto Outside Listeners").
+- A session is a logged-in account. Session files (`storage/app/clients/sessions`), `API_ID`, `API_HASH`, and session encryption keys are secrets: never print, log, commit, or copy them.
+- Never run `client:auth`, `session:import`, `session:encrypt` / `session:decrypt`, `client:export`, or `logOut()` without the user's explicit request. Authentication is interactive; do not try to automate it.
+- Userbots can be banned for automated behavior. Keep `rate_limit`, `flood_sleep`, the `obfuscated` transport, and a stable realistic `device` preset. Never write loops that message many users, join many chats, add members, or scrape participants unless the user explicitly asks, and then pace them.
+- One session must only be connected from one process. When the pump runs (under Surge or `client:start`), every other process reaches the session through the pump's RPC (see the sessions rule). Never run the same bot token over the Bot API webhook and an MTProto session at the same time.
 
-## Setup
+## How to Apply
 
-```php
-// bootstrap/app.php
-->withListener(
-    bot: __DIR__.'/../listens/bot.php',
-    client: __DIR__.'/../listens/client.php',   // MTProto user sessions
-    commands: __DIR__.'/../listens/console.php',
-)
-```
+1. Check `bootstrap/app.php` (`withListener(client: ...)` and session-bound `bot:` entries), `config/mtproto.php` (`sessions`), and the existing listen files before adding listeners.
+2. Map the task to the rule index below and read each mapped rule before editing.
+3. Remember that a user account sees its own messages: scope listeners with `incomming()` / `outgoing()`.
+4. Handler exceptions are logged to `mtproto.log_channel` instead of crashing the pump — check `read-log-entries` / `last-error` when a listener seems to do nothing.
+5. After changing listeners, restart the process that runs the sessions: `surge:reload` only reloads Surge's HTTP workers, so restart the Surge server (`surge:stop` + `surge:start`, or the supervisor) or the `client:start` process; a running pump keeps the old code.
 
-- Credentials come from `.env` (`API_ID`, `API_HASH`); sessions are declared in `config/mtproto.php` (`sessions`).
-- Authenticate once, interactively, with `php laragram client:auth` (`--session=support`, `--bot=TOKEN`, or `--qr`).
-- Run sessions with `php laragram surge:start` (the pump starts automatically for authorized sessions) or `php laragram client:start --session=default,support` / `--all`.
+## Rule Index
 
-## Listeners
-
-```php
-use LaraGram\MTProto\Facades\Client;
-use LaraGram\MTProto\Foundation\ClientRequest;
-
-Client::onCommand('start', function (ClientRequest $request) {
-    $request->sendMessage(peer: $request->chatId(), message: 'Welcome!');
-});
-
-Client::incomming()->onText('ping', function (ClientRequest $request) {
-    $request->sendMessage(peer: $request->chatId(), message: 'pong');
-});
-
-Client::forSessions('support')->onText('hours', [SupportController::class, 'hours']);
-```
-
-- The verbs mirror the Bot facade (`onText`, `onCommand`, `onPhoto`, `onCallbackQueryData`, `onStep`, `fallback`, ...) plus MTProto-only updates (`onEditedMessage`, `onDeletedMessages`, `onUpdate`, ...).
-- A user account sees its own messages as updates: scope with `incomming()` or `outgoing()` so the account does not answer itself.
-- Scope multi-account listeners with `forSessions()`. Replies go out through the session that received the update automatically.
-
-## ClientRequest
-
-- Read fields as properties (`$request->message`, `$request->peer_id`, `$request->media`) or helpers: `text()`, `callbackData()`, `chatId()`, `messageId()`, `entities()`, `type()`, `session()`, `isOutgoing()`, `toArray()`.
-- Reply with the high-level API on the request: `sendMessage(peer:, message:, parse_mode:)`, `sendPhoto`, `sendDocument`, `sendAlbum`, `editMessage`, `forwardMessages`, `markAsRead`, `answerCallback`, `answerInlineQuery`.
-- Peers accept `@username`, numeric ids, or `'me'`.
-- Download media with `$request->download()` / `downloadMediaToFile($path)`; check `getMediaInfo()` for size before downloading large files.
-- Reach any TL namespace with `$request->messages->...`, `$request->channels->...`, or call a raw method with `invoke('help.getConfig', [...])`.
-
-## Calling MTProto Outside Listeners
-
-- In jobs, commands, and scheduled tasks running in a process that owns the session, use `Client::session('support')->sendMessage(...)`.
-- In web requests and Surge workers while the pump is running, use the invoker so the call is forwarded to the pump over its local RPC socket instead of opening a second connection:
-
-```php
-$invoker = app('mtproto.manager')->invoker('support');
-
-$invoker->call('sendMessage', ['peer' => '@team', 'message' => 'Deploy finished']);
-$invoker->invoke('messages.getHistory', ['peer' => '@team', 'limit' => 10]);
-```
-
-## Configuration Checklist
-
-| Key | Guidance |
+| Concern | Read |
 | --- | --- |
-| `driver` / `use_pump` | `swoole` + pump for non-blocking, concurrent handlers (required under Surge) |
-| `stores` | Where auth keys, peers, and update state live; use durable stores for sessions |
-| `rate_limit`, `flood_sleep` | Keep enabled; they prevent `FLOOD_WAIT` and reduce ban risk |
-| `pacing` | Adds human-like delays for long-lived userbots |
-| `surge.sessions`, `surge.isolation` | Which sessions the Surge pump runs, and how state is reset between updates (`concurrent` or `sandbox`) |
-| `rpc` | The pump's local socket used by `invoker()` |
+| Listen files, the `Client` facade verbs, patterns, direction and session scoping, groups, middleware, steps, reading `ClientRequest` | [`rules/listening.md`](rules/listening.md) |
+| Peers, sending and formatting messages, keyboards, editing / forwarding / deleting, searching, answering queries, the namespaced API and `invoke()`, media uploads, albums, `file_id` reuse, downloads, stories | [`rules/requests-and-media.md`](rules/requests-and-media.md) |
+| Reading and iterating chats, creating chats, bans / restrictions / admins, invite links, pinning, forum topics, profile and contacts, reactions, polls, secret chats, takeout, stars and gifts, bot controls, business messages | [`rules/chats-and-features.md`](rules/chats-and-features.md) |
+| Sessions and multi-account setup, authentication commands, importing and encrypting sessions, `config/mtproto.php`, ban-safety settings, stores, the Surge-hosted pump, `client:start`, calling sessions from jobs / controllers / web requests | [`rules/sessions-and-running.md`](rules/sessions-and-running.md) |
+
+## Decision Rules
+
+- Use the Bot API (`Bot::` listens, `LaraGram\Request\Request`) for normal bots. Reach for MTProto only when the task needs a user account or MTProto-only capabilities.
+- Prefer the high-level methods (`sendMessage`, `banChatMember`, `iterateHistory`) over the namespaced API, and the namespaced API over raw `invoke()`.
+- Use the generator iterators (`iterateDialogs`, `iterateHistory`, `iterateParticipants`) for large collections instead of manual offset loops.
+- Store and reuse `file_id`s instead of uploading the same file repeatedly.
+- Inside a handler reply through `$request` (the originating session); outside a handler use `Client::session($name)` in the pump process and `app('mtproto.manager')->invoker($name)` in any other process.

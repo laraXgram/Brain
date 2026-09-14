@@ -17,6 +17,13 @@ To quickly generate a new controller, you may run the `make:controller` Commande
 php laragram make:controller UserController
 ```
 
+Controllers for web routes live in `app/Http/Controllers` and receive `LaraGram\Http\Request`. Pass the `--web` option to generate one; the web-only options `--resource`, `--api`, `--singleton`, `--model`, `--parent` and `--requests` imply `--web`:
+
+```shell
+php laragram make:controller PhotoController --web
+php laragram make:controller PhotoController --resource --model=Photo
+```
+
 Let's take a look at an example of a basic controller. A controller may have any number of public methods which will respond to incoming Bot requests:
 
 ```php

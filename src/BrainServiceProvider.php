@@ -59,7 +59,10 @@ class BrainServiceProvider extends ServiceProvider
             return;
         }
 
-        Mcp::local('laragram-brain', Brain::class);
+        // The MCP server is only started from the console (brain:mcp), never by Surge workers or web requests.
+        if ($this->app->runningInConsole()) {
+            Mcp::local('laragram-brain', Brain::class);
+        }
 
         $this->registerPublishing();
         $this->registerCommands();
@@ -117,7 +120,8 @@ class BrainServiceProvider extends ServiceProvider
              *      timestamp: string,
              *      data: array,
              *      url:string,
-             *      userAgent:string
+             *      userAgent:string,
+             *      telegram?: array{platform?: string, version?: string, colorScheme?: string}|null
              *  } $log */
             foreach ($logs as $log) {
                 $logger->write(
@@ -128,11 +132,12 @@ class BrainServiceProvider extends ServiceProvider
                         default => $log['type']
                     },
                     message: self::buildLogMessageFromData($log['data']),
-                    context: [
+                    context: array_filter([
                         'url' => $log['url'],
                         'user_agent' => $log['userAgent'] ?: null,
+                        'telegram' => is_array($log['telegram'] ?? null) ? $log['telegram'] : null,
                         'timestamp' => $log['timestamp'] ?: now()->toIso8601String(),
-                    ]
+                    ], fn (mixed $value): bool => $value !== null)
                 );
             }
 

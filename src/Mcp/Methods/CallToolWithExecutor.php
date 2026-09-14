@@ -59,9 +59,11 @@ class CallToolWithExecutor implements Errable, Method
             $response = Response::error('Tool execution error: '.$throwable->getMessage());
         }
 
-        return $this->toJsonRpcResponse($request, $response, fn ($responseFactory): array => [
-            'content' => $responseFactory->responses()->map(fn ($response) => $response->content()->toTool($tool))->all(),
-            'isError' => $responseFactory->responses()->contains(fn ($response) => $response->isError()),
-        ]);
+        return $this->toJsonRpcResponse($request, $response, fn ($responseFactory): array => $responseFactory->mergeStructuredContent(
+            $responseFactory->mergeMeta([
+                'content' => $responseFactory->responses()->map(fn ($response) => $response->content()->toTool($tool))->all(),
+                'isError' => $responseFactory->responses()->contains(fn ($response) => $response->isError()),
+            ])
+        ));
     }
 }

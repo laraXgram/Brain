@@ -43,13 +43,19 @@ Set options with `$keyboard->setOptions(['resize_keyboard' => true, 'one_time_ke
 
 ```php
 Bot::onCallbackQueryData('order:cancel:{order}', function (Request $request, Order $order) {
-    abort_unless($order->user_id === user()->id, 403);
+    if ($order->user_id !== user()->id) {
+        return $request->answerCallbackQuery(callback_query()->id, text: 'Not allowed.', show_alert: true);
+    }
 
     $order->cancel();
 
     $request->answerCallbackQuery(callback_query()->id, text: 'Order cancelled');
-})->whereNumber('order');
+})
+    ->whereNumber('order')
+    ->missing(fn (Request $request) => $request->answerCallbackQuery(callback_query()->id, text: 'Order not found.'));
 ```
+
+When the bound record does not exist the listen does not run, so use `missing()` to still answer the callback query.
 
 - Edit the message that contains the keyboard (`editMessageText`, `editMessageReplyMarkup`) instead of sending a new message on every press.
 - Do not use the `paginate:` prefix for your own buttons; Telegram pagination uses `paginate:<key>:<page>`.

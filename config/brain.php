@@ -97,6 +97,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Bot Runtime Tools
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, Brain exposes the bot runtime tools of laraxgram/mcp to
+    | agents: listing listens, simulating Telegram updates, rendering the
+    | templates and inspecting conversations. Nothing is sent to Telegram
+    | and the tools are only available within the "local" environment.
+    |
+    */
+
+    'bot_runtime_tools' => env('BRAIN_BOT_RUNTIME_TOOLS', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Brain Browser Logs Watcher
     |--------------------------------------------------------------------------
     |

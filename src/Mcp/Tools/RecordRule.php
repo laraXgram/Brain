@@ -22,7 +22,7 @@ class RecordRule extends Tool
     /**
      * The tool's description.
      */
-    protected string $description = 'Record a durable project rule in the shared, committed markdown notes in .ai/rules, grouped by area. Only call this when the user explicitly asks for a rule to be recorded, remembered, or documented. Instructions for the work at hand are not rules, no matter how emphatic: "remove this typo", "use X here", and "don\'t do that again" are work to do, not rules to record. A rule constrains future work across many files; it never describes a single fix. Never call this on your own initiative, as a byproduct of a change, or to summarize what you just did. When in doubt, do not call it. Pass a glob for the files it applies to (e.g. app/Http/Controllers/**). Keep the note to a few lines. Do not record secrets, transient state, or anything already obvious from the code.';
+    protected string $description = 'Record a durable project rule in the shared, committed markdown notes in .ai/rules, grouped by area. Only call this when the user explicitly asks for a rule to be recorded, remembered, or documented. Instructions for the work at hand are not rules, no matter how emphatic: "remove this typo", "use X here", and "don\'t do that again" are work to do, not rules to record. A rule constrains future work across many files; it never describes a single fix. Never call this on your own initiative, as a byproduct of a change, or to summarize what you just did. When in doubt, do not call it. Pass a glob for the files it applies to (e.g. listens/**, app/Controllers/** or app/Conversations/**). Keep the note to a few lines. Do not record secrets, transient state, or anything already obvious from the code.';
 
     /**
      * Determine whether the tool should be registered with the MCP server.
@@ -41,7 +41,7 @@ class RecordRule extends Tool
     {
         return [
             'glob' => $schema->string()
-                ->description('Glob for the files this rule applies to, for example "app/Http/Controllers/**" or "app/Models/*.php". This routes the rule into a shared area file and is how agents find it later.')
+                ->description('Glob for the files this rule applies to, for example "listens/**", "app/Controllers/**", "app/templates/**" or "app/Models/*.php". This routes the rule into a shared area file and is how agents find it later.')
                 ->required(),
             'title' => $schema->string()
                 ->description('A short, specific heading, for example "Extend BaseController for tenant scoping".')

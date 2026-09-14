@@ -25,8 +25,10 @@ class ComposerLock extends PackageScanner
             $this->warn('Malformed composer.lock (missing "packages" key): '.$this->path.'composer.lock');
         }
 
-        $this->processDependencies($this->versions($json['packages'] ?? null), $packages, false, authoritative: true);
-        $this->processDependencies($this->versions($json['packages-dev'] ?? null), $packages, true, authoritative: true);
+        $aliases = $this->aliases($json['aliases'] ?? null);
+
+        $this->processDependencies($this->versions($json['packages'] ?? null, $aliases), $packages, false, authoritative: true);
+        $this->processDependencies($this->versions($json['packages-dev'] ?? null, $aliases), $packages, true, authoritative: true);
 
         return $packages;
     }
@@ -92,9 +94,10 @@ class ComposerLock extends PackageScanner
     }
 
     /**
+     * @param  array<string, string>  $aliases
      * @return array<string, string>
      */
-    private function versions(mixed $rawPackages): array
+    private function versions(mixed $rawPackages, array $aliases = []): array
     {
         if (! is_array($rawPackages)) {
             return [];
@@ -118,11 +121,57 @@ class ComposerLock extends PackageScanner
             }
 
             $version = $raw['version'] ?? null;
+            $version = is_string($version) ? $version : '';
 
-            $versions[$name] = is_string($version) ? $version : '';
+            $versions[$name] = str_starts_with($version, 'dev-')
+                ? $this->branchVersion($name, $version, $raw, $aliases)
+                : $version;
         }
 
         return $versions;
+    }
+
+    /**
+     * Resolve the version of a package installed from a branch (e.g. a path repository on "dev-master").
+     *
+     * An inline alias ("dev-master as 4.0.0") wins, then the package's branch alias ("4.x-dev").
+     *
+     * @param  array<string, mixed>  $raw
+     * @param  array<string, string>  $aliases
+     */
+    private function branchVersion(string $name, string $version, array $raw, array $aliases): string
+    {
+        // Composer records the default branch of an inline alias as "9999999-dev".
+        $alias = $aliases[$name.'@'.$version]
+            ?? (($raw['default-branch'] ?? false) === true ? ($aliases[$name.'@9999999-dev'] ?? null) : null);
+
+        if ($alias !== null) {
+            return $alias;
+        }
+
+        $branchAlias = $raw['extra']['branch-alias'][$version] ?? null;
+
+        return is_string($branchAlias) ? $branchAlias : $version;
+    }
+
+    /**
+     * @return array<string, string> "package@version" => alias
+     */
+    private function aliases(mixed $rawAliases): array
+    {
+        if (! is_array($rawAliases)) {
+            return [];
+        }
+
+        $aliases = [];
+
+        foreach ($rawAliases as $alias) {
+            if (is_array($alias) && is_string($alias['package'] ?? null) && is_string($alias['version'] ?? null) && is_string($alias['alias'] ?? null)) {
+                $aliases[$alias['package'].'@'.$alias['version']] = $alias['alias'];
+            }
+        }
+
+        return $aliases;
     }
 
     private function vendorDir(): string

@@ -8,13 +8,14 @@ use LaraGram\Support\Env\Dotenv;
 use LaraGram\Support\Env;
 use LaraGram\Brain\Support\CommandNormalizer;
 use LaraGram\Mcp\Response;
+use LaraGram\Mcp\ResponseFactory;
 use LaraGram\Console\Process\Exception\ProcessFailedException;
 use LaraGram\Console\Process\Exception\ProcessTimedOutException;
 use LaraGram\Console\Process\Process;
 
 class ToolExecutor
 {
-    public function execute(string $toolClass, array $arguments = []): Response
+    public function execute(string $toolClass, array $arguments = []): Response|ResponseFactory
     {
         if (! ToolRegistry::isToolAllowed($toolClass)) {
             return Response::error("Tool not registered or not allowed: {$toolClass}");
@@ -23,7 +24,7 @@ class ToolExecutor
         return $this->executeInSubprocess($toolClass, $arguments);
     }
 
-    protected function executeInSubprocess(string $toolClass, array $arguments): Response
+    protected function executeInSubprocess(string $toolClass, array $arguments): Response|ResponseFactory
     {
         $command = $this->buildCommand($toolClass, $arguments);
 
@@ -77,44 +78,36 @@ class ToolExecutor
      *
      * @param  array<string, mixed>  $data
      */
-    protected function reconstructResponse(array $data): Response
+    protected function reconstructResponse(array $data): Response|ResponseFactory
     {
         if (! isset($data['isError']) || ! isset($data['content'])) {
             return Response::error('Invalid tool response format.');
         }
 
+        $texts = collect(is_array($data['content']) ? $data['content'] : [])
+            ->filter(fn (mixed $content): bool => is_array($content))
+            ->map(fn (array $content): string => (string) ($content['text'] ?? ''));
+
         if ($data['isError']) {
-            $errorText = 'Unknown error';
-
-            if (is_array($data['content']) && ! empty($data['content'])) {
-                $firstContent = $data['content'][0] ?? [];
-
-                if (is_array($firstContent)) {
-                    $errorText = $firstContent['text'] ?? $errorText;
-                }
-            }
-
-            return Response::error($errorText);
+            return Response::error($texts->filter()->first() ?? 'Unknown error');
         }
 
-        // Handle array format - extract text content
-        if (is_array($data['content']) && ! empty($data['content'])) {
-            $firstContent = $data['content'][0] ?? [];
-
-            if (is_array($firstContent)) {
-                $text = $firstContent['text'] ?? '';
-
-                $decoded = json_decode((string) $text, true);
-
-                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                    return Response::json($decoded);
-                }
-
-                return Response::text($text);
-            }
+        if (isset($data['structuredContent']) && is_array($data['structuredContent']) && $data['structuredContent'] !== []) {
+            return Response::structured($data['structuredContent']);
         }
 
-        return Response::text('');
+        if ($texts->count() > 1) {
+            return new ResponseFactory($texts->map(fn (string $text): Response => Response::text($text))->values()->all());
+        }
+
+        $text = $texts->first() ?? '';
+        $decoded = json_decode($text, true);
+
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            return Response::json($decoded);
+        }
+
+        return Response::text($text);
     }
 
     /**

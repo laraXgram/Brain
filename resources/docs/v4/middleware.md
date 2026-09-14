@@ -16,6 +16,8 @@ To create a new middleware, use the `make:middleware` Commander command:
 php laragram make:middleware EnsureTokenIsValid
 ```
 
+Use `php laragram make:middleware EnsureTokenIsValid --web` to generate an HTTP middleware for web routes in `app/Http/Middleware` instead.
+
 This command will place a new `EnsureTokenIsValid` class within your `app/Middleware` directory. In this middleware, we will only allow access to the listen if the supplied `token` input matches a specified value. Otherwise, we will redirect the users back to the `home` section:
 
 ```php
