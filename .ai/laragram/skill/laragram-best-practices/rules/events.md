@@ -35,6 +35,37 @@ class NotifyCustomerOfShipment implements ShouldQueue
 }
 ```
 
+## Broadcast Events to Many Chats
+
+When an event should reach an audience of chats (every user, every group), don't queue a listener that loops over chats. Make the event implement `ShouldBroadcast` and send it through the `telegram` broadcast connection: `broadcastOn()` returns the audiences, `broadcastAs()` the Bot API method, and `broadcastWith()` its parameters.
+
+```php
+class ProductLaunched implements ShouldBroadcast
+{
+    use Dispatchable, InteractsWithBroadcasting, SerializesModels;
+
+    public function __construct(public Product $product)
+    {
+        $this->broadcastVia('telegram');
+    }
+
+    public function broadcastOn(): array
+    {
+        return [Audience::users()];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'sendMessage';
+    }
+
+    public function broadcastWith(): array
+    {
+        return ['text' => "New: {$this->product->name}"];
+    }
+}
+```
+
 ## Pass Identifiers, Not the Current Update
 
 Queued listeners run in a queue worker, where `chat()`, `user()`, and the incoming `LaraGram\Request\Request` data are not available. Put the chat id, user id, or model on the event instead of reading them from the update inside the listener.

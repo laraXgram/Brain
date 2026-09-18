@@ -5,6 +5,8 @@
     - [User Clients vs. Bots](#user-clients-vs-bots)
     - [Feature Overview](#feature-overview)
 - [Installation](#installation)
+    - [Creating the Application](#creating-the-application)
+    - [Requiring the Package](#requiring-the-package)
     - [API Credentials](#api-credentials)
     - [Publishing the Configuration](#publishing-the-configuration)
 - [Registering Listen Files](#registering-listen-files)
@@ -71,11 +73,34 @@ You choose which one a session is when you [authenticate](/v4/mtproto-authentica
 <a name="installation"></a>
 ## Installation
 
-The MTProto component is a LaraGram package. Once it is required via Composer, its service provider is auto-discovered — no manual registration is needed.
+MTProto is an **add-on package for the LaraGram framework**, not a standalone library: it plugs into your application's listen files, configuration, facades and Commander commands. So the first step is a LaraGram application.
+
+<a name="creating-the-application"></a>
+### Creating the Application
+
+If you do not have one yet, create it with the [LaraGram installer](/v4/installation#installing-php), which is the recommended way to start any LaraGram project — it sets up the bot connection, the database and the application skeleton for you:
+
+```shell
+composer global require laraxgram/installer
+
+laragram new example-app
+
+cd example-app
+```
+
+<a name="requiring-the-package"></a>
+### Requiring the Package
+
+Inside your LaraGram application, require the package. Its service provider is auto-discovered, so there is nothing to register by hand:
 
 ```shell
 composer require laraxgram/mtproto
 ```
+
+MTProto talks to Telegram's data centers directly, so it needs PHP 8.3 or newer with the `gmp`, `json`, `mbstring`, `openssl`, `sockets` and `zlib` extensions. It also brings in [Surge](/v4/surge), which runs the client's event loop. For non-blocking I/O, install the `swoole` or `openswoole` extension as well.
+
+> [!NOTE]
+> Everything in these pages assumes a LaraGram application. If you are looking for a standalone MTProto library for plain PHP, this package is not it — its whole design is the LaraGram way of writing bots.
 
 <a name="api-credentials"></a>
 ### API Credentials

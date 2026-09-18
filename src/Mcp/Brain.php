@@ -39,7 +39,7 @@ class Brain extends Server
     /**
      * The MCP server's instructions for the LLM.
      */
-    protected string $instructions = 'LaraGram ecosystem MCP server for Telegram bot, MTProto, Mini App (Luna) and web applications, offering application and bot configuration details, database access, error and browser logs, local LaraGram and Telegram Bot API documentation search, and bot runtime tools (list listens, simulate updates, render templates) that never send anything to Telegram. Brain helps with code generation.';
+    protected string $instructions = 'LaraGram ecosystem MCP server for Telegram bot, MTProto, Mini App (Luna) and web applications, offering application and bot configuration details, database access, error and browser logs, local LaraGram and Telegram Bot API documentation search, and bot runtime tools (list listens, simulate updates, render templates, inspect conversations) that never send anything to Telegram. Brain helps with code generation.';
 
     /**
      * The icons exposed to MCP clients.

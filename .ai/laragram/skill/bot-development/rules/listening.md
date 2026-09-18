@@ -49,7 +49,7 @@ Bot::onCallbackQueryData('order:cancel:{id}', [OrderController::class, 'cancel']
 Bot::match(['TEXT', 'COMMAND'], 'help', [HelpController::class, 'show']);
 ```
 
-Other useful verbs include `onReferral` (deep-link `/start` payloads), `onInlineQuery`, `onPreCheckoutQuery`, `onSuccessfulPayment`, `onMyChatMember`, `onChatJoinRequest`, `onWebAppData`, and entity listens such as `onUrl` or `onMention`. Search the docs (`listening` page) for the full list.
+Other useful verbs include `onReferral` (deep-link `/start` payloads), `onPaginate` (taps on a Telegram paginator's keyboard, see [`templates.md`](templates.md)), `onInlineQuery`, `onPreCheckoutQuery`, `onSuccessfulPayment`, `onMyChatMember`, `onChatJoinRequest`, `onWebAppData`, and entity listens such as `onUrl` or `onMention`. Search the docs (`listening` page) for the full list.
 
 ## Listen Parameters
 

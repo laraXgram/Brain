@@ -5,7 +5,7 @@
 
 Luna is the official adapter that lets you build modern, single-page style frontends for your LaraGram application using React, Vue, or Svelte — without building an API, without client-side routing configuration, and without losing any of the server-side conveniences you already know: [routing](/v4/routing), [controllers](/v4/controllers), [middleware](/v4/middleware), [validation](/v4/validation), and [authorization](/v4/authorization).
 
-Luna is a LaraGram port of the ideas behind [Luna.js](https://laraxgram.github.io/v4/luna). You write your routes and controllers exactly as you always have. Instead of returning a Blade [view](/v4/views) or JSON, a controller returns a Luna *response*, naming a JavaScript page component and the props it should receive:
+Luna has two halves that ship together: the LaraGram adapter you see in this page, and the Luna-JS client runtime that drives the browser. You write your routes and controllers exactly as you always have. Instead of returning a Blade [view](/v4/views) or JSON, a controller returns a Luna *response*, naming a JavaScript page component and the props it should receive:
 
 ```php
 use LaraGram\Luna\Luna;
@@ -73,11 +73,35 @@ You will rarely interact with the protocol directly — the PHP adapter and the 
 <a name="server-side-installation"></a>
 ## Server-Side Installation
 
-Install the PHP adapter with Composer:
+Luna is an **add-on for the LaraGram framework**: it renders pages from your LaraGram controllers, authenticates Mini App users through LaraGram's auth guards, and is configured like any other LaraGram component. It always lives inside a LaraGram application.
+
+<a name="starting-from-a-starter-kit"></a>
+### Starting From a Starter Kit
+
+The quickest way — and the recommended one — is to create the application with the [LaraGram installer](/v4/installation#installing-php) and pick one of the [starter kits](/v4/starter-kits). Each kit ships with Luna already wired up: the PHP adapter, the npm packages, the root template, Vite, and an example page:
+
+```shell
+composer global require laraxgram/installer
+
+laragram new my-app
+
+cd my-app
+npm install && npm run build
+composer run dev
+```
+
+The installer asks which starter kit you want; `React`, `Vue` and `Svelte` are all Luna based, so everything on this page is already in place and you may skip straight to [Your First Page](#your-first-page).
+
+<a name="adding-luna-to-an-existing-application"></a>
+### Adding Luna to an Existing Application
+
+To add Luna to an application you already have, require the PHP adapter with Composer:
 
 ```shell
 composer require laraxgram/luna
 ```
+
+Luna needs PHP 8.2 or newer with the `json` and `sodium` extensions, and a LaraGram 4 application with the [web layer](/v4/routing) enabled.
 
 Publish the configuration file. This creates `config/luna.php`, where you configure [server-side rendering](/v4/luna-frontend#server-side-rendering), page paths, history encryption, and [Telegram](/v4/luna-tma#configuration) options:
 

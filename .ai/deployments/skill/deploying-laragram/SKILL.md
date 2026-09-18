@@ -105,7 +105,8 @@ Add one program for `php laragram surge:start` when using Surge, and one for `ph
 | Bot does not respond | `webhook:info` last error (delivery problems only); HTTPS certificate; handler exceptions in `storage/logs`, because updates are processed after Telegram's request is answered (PHP-FPM backgrounds each update with `php`, so the CLI `php` binary must work for the web server user) |
 | Server overloaded during bursts | Every update starts a background process (PHP-FPM) or uses a task worker (Surge): queue slow work, and prefer Surge for high traffic |
 | Conversations or steps forget state | The cache store is `array` or `file` across servers; use `redis` |
-| `429 Too Many Requests` | Enable anti-flood with a shared store and pace broadcasts with `antiFloodWith()` |
+| `429 Too Many Requests` | Enable anti-flood with a shared store; send bulk messages with the `Broadcast` facade, which paces them with the `broadcast` scope |
+| Broadcast stuck or recipients messaged twice | A queue worker must run; the progress cache store must be shared; each chunk job must finish before the queue connection's `retry_after` (lower `chunk()`) |
 | New listens not picked up | Run `php laragram listen:clear` / `optimize`, and `surge:reload` under Surge (restart Surge when the listens belong to MTProto sessions) |
 | Template changes not visible | `php laragram template:clear` (or `optimize:clear`) after deploying template edits without `optimize` |
 | MTProto session stopped | Session not authorized on the server (`client:auth`), or another process uses the same session |

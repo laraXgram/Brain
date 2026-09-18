@@ -1,6 +1,6 @@
 ---
 name: mcp-development
-description: "Use this skill for LaraGram MCP development with laraxgram/mcp. Trigger when creating or editing MCP servers, tools, prompts, resources, resource templates, MCP Apps (including Luna apps), Telegram tool sets (BotApi, BotRuntime, MTProto), token authentication for MCP clients, subscriptions, elicitation, or MCP clients. Covers: make:mcp-* generators, routes/ai.php registration, attributes, response shapes, streaming, #[AsTool], #[RequiresAbility], Response::confirm/elicit, Mcp::toolsListChanged, mcp:start and mcp:inspector, and Surge considerations. Do not use for generic AI features without MCP."
+description: "Use this skill for LaraGram MCP development with laraxgram/mcp. Trigger when creating or editing MCP servers, tools, prompts, resources, resource templates, MCP Apps (including Luna apps), Telegram tool sets (BotApi, BotRuntime, MTProto), tools that broadcast to all users or groups (Broadcast facade), token authentication for MCP clients, subscriptions, elicitation, or MCP clients. Covers: make:mcp-* generators, routes/ai.php registration, attributes, response shapes, streaming, #[AsTool], #[RequiresAbility], Response::confirm/elicit, Mcp::toolsListChanged, mcp:start and mcp:inspector, and Surge considerations. Do not use for generic AI features without MCP."
 license: MIT
 metadata:
   author: laraxgram
@@ -147,8 +147,60 @@ protected function boot(): void
 @endbrainsnippet
 
 - Bot API tool sets support `only()`, `except()`, `preset()`, `readOnly()`, `withoutDestructive()`, `allowChats()`, `connection()`, `requireAbilities()`, and `confirmDestructive()`. Keep large catalogs behind `ToolSearch`.
-- `BotRuntime` tools are only enabled in the `local` environment unless `inEnvironments()` / `inAllEnvironments()` is used.
+- `BotRuntime` tools (`bot_listens`, `bot_simulate_update`, `bot_render_template`, `bot_conversation_state`) are only enabled in the `local` environment unless `inEnvironments()` / `inAllEnvironments()` is used. LaraGram Brain already exposes this tool set to the editor's agent, so register it in a server of your own only when another client needs it.
 - MTProto tools forward calls to the session's pump process when it runs under Surge, so they never open a second connection on the same session. Restrict peers with `allowPeers()` and file paths with `allowFilesFrom()`.
+
+## Broadcasting From Tools
+
+Bot API tool sets call one chat at a time. When a tool must reach many chats (all users, all groups, an audience), call the `Broadcast` facade from a custom tool instead of letting the model loop over chat ids. Broadcasts are queued, paced, and tracked, so the tool returns immediately with an id.
+
+@brainsnippet("Broadcast Tool", "php")
+use LaraGram\Contracts\JsonSchema\JsonSchema;
+use LaraGram\Mcp\Request;
+use LaraGram\Mcp\Response;
+use LaraGram\Mcp\Server\Attributes\Description;
+use LaraGram\Mcp\Server\Attributes\RequiresAbility;
+use LaraGram\Mcp\Server\Tool;
+use LaraGram\Mcp\Server\Tools\Annotations\IsDestructive;
+use LaraGram\Support\Facades\Broadcast;
+
+#[Description('Send an announcement to every user of the bot. Returns the broadcast id.')]
+#[IsDestructive]
+#[RequiresAbility('broadcasts:send')]
+class AnnounceToUsers extends Tool
+{
+    public function schema(JsonSchema $schema): array
+    {
+        return [
+            'text' => $schema->string()->description('The announcement, in HTML.')->required(),
+        ];
+    }
+
+    public function handle(Request $request): Response
+    {
+        $request->validate(['text' => 'required|string|max:4096']);
+
+        $broadcast = Broadcast::users()->sendMessage($request->get('text'), 'HTML');
+
+        $recipients = $broadcast->count();
+
+        if (! $request->confirmed()) {
+            return Response::confirm("Send this announcement to {$recipients} users?");
+        }
+
+        $id = $broadcast->send();
+
+        return Response::structured(['broadcast_id' => $id, 'recipients' => $recipients]);
+    }
+}
+@endbrainsnippet
+
+- Always mark broadcast tools `#[IsDestructive]`, require an ability, and confirm with the audience size before sending.
+- Expose progress with a separate `#[IsReadOnly]` tool returning `Broadcast::progress($id)?->toArray()` (or `Broadcast::recent()`), and cancellation with `Broadcast::cancel($id)`.
+- Let tool arguments choose filters (`language`, `activeSince`, `tagged`, `membersOf`) and scheduling (`at`, `between`) rather than accepting raw chat id lists, and offer a preview tool that calls `->test($chatId)` on the operator's own chat.
+- Tools can edit or undo a broadcast that used `->recallable()` with `Broadcast::sent($id)->editMessageText(...)` and `Broadcast::recall($id)` (which deletes what was sent, unpins, unbans, and so on); mark those `#[IsDestructive]` too.
+- Pass `->bot($connection)` in multi-bot applications: MCP requests have no incoming update to pick the bot from.
+- Never add broadcast tools to a server exposed to untrusted clients, and never broadcast to real chats while testing a server unless the user asks.
 
 ## Authentication and Authorization
 
@@ -214,4 +266,5 @@ use LaraGram\Contracts\JsonSchema\JsonSchema;
 - Forgetting to register primitives on the server or the server in `routes/ai.php`.
 - Omitting a meaningful `#[Description]`.
 - Exposing destructive Bot API or MTProto methods without `withoutDestructive()`, `confirmDestructive()`, or abilities.
+- Looping over chats inside a tool instead of using `Broadcast` (the MCP request times out and Telegram rate limits the bot).
 - Wrong response pattern: `new Response()` instead of `Response::text()`.

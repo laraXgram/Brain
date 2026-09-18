@@ -41,6 +41,7 @@ Cross-cutting changes often need more than one rule file.
 | Web routes, controllers, route binding, resources, middleware | [`rules/routing.md`](rules/routing.md) |
 | Schema changes, columns, foreign keys, indexes | [`rules/migrations.md`](rules/migrations.md) |
 | Jobs, retries, uniqueness, batches, broadcasts, slow bot work | [`rules/queue-jobs.md`](rules/queue-jobs.md) |
+| Messaging all users or groups with the `Broadcast` facade, audiences | the `bot-development` skill (`rules/broadcasting.md`) |
 | Cache lifetime, invalidation, locks, memoization | [`rules/caching.md`](rules/caching.md) |
 | Outbound HTTP requests, retries, timeouts | [`rules/http-client.md`](rules/http-client.md) |
 | Exceptions, reporting, rendering, log context | [`rules/error-handling.md`](rules/error-handling.md) |

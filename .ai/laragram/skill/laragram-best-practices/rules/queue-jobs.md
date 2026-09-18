@@ -116,12 +116,18 @@ public function retryUntil(): DateTimeInterface
 
 A webhook update should finish quickly. Dispatch jobs for broadcasts, file processing, external API calls, and other slow work, and reply to the user right away (for example with `answerCallbackQuery` or a short message). In a job, `chat()` and `user()` are not available because no update is being handled: pass the chat or user id into the job and send through `app('request')->sendMessage($chatId, ...)`.
 
-## Pace Broadcasts With Anti-Flood
+## Use the Broadcast Facade for Bulk Sends
 
-Telegram limits outgoing messages per chat and globally. For bulk sends, enable anti-flood (`bot.anti_flood`, with a shared store such as `redis`) and pace the loop with a named limit instead of hand-written `sleep()` calls:
+Don't write a job that loops over chat ids. `Broadcast` queues the work in chunks, paces it with the `broadcast` anti-flood scope, retries 429 responses, skips chats that blocked the bot, and tracks progress:
 
 ```php
-foreach ($chatIds as $chatId) {
-    app('request')->antiFloodWith('broadcast')->sendMessage($chatId, $announcement);
-}
+use LaraGram\Support\Facades\Broadcast;
+
+$id = Broadcast::users()->sendMessage($announcement)->onQueue('broadcasts')->queue();
 ```
+
+- Run a worker for that queue, and keep each chunk (`chunk()`, 100 recipients by default) shorter than the queue connection's `retry_after`, or a chunk may run twice and message recipients again. Broadcast chunk jobs are never retried for the same reason.
+- Use a shared cache store (redis or database) so `Broadcast::progress($id)` and `Broadcast::cancel($id)` work across workers.
+- Pass a `file_id` or URL, never a `CURLFile`: broadcasts are serialized onto the queue.
+- Scheduled broadcasts (`later()`) and delivery windows (`between()`) rely on delayed jobs: they need the database, redis or beanstalkd queue and throw on `sync`. Don't emulate them with `sleep()` or cron loops. `send()` delivers in the current process; `queue()` and `later()` go through the queue.
+- Templates, several steps (`next()`) and live membership checks make each recipient slower: lower `chunk()` accordingly.

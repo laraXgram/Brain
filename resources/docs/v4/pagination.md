@@ -282,14 +282,14 @@ The JSON from the paginator will include meta information such as `total`, `curr
 <a name="telegram-bot-pagination"></a>
 ## Telegram Bot Pagination
 
-Everything above renders pagination as HTML links for the [Web](/v4/routing) side of your application. LaraGram also ships a parallel paginator built for **Telegram bots**, which renders the page navigation as an **inline keyboard** with previous / next buttons and page indicators instead of HTML links.
+Everything above renders pagination as HTML links for the [Web](/v4/routing) side of your application. LaraGram also ships a parallel paginator built for **Telegram bots**, which renders the page navigation as an **inline keyboard** with previous / next buttons and page numbers instead of HTML links.
 
-The Telegram paginators mirror the web paginators exactly — the same query-builder integration, the same instance methods — but every URL becomes a `callback_data` string, and the navigation is drawn with a fully customizable [template](/v4/templates).
+The Telegram paginators mirror the web paginators exactly — the same query builder integration, the same instance methods — but every URL becomes a `callback_data` string, and the navigation is drawn by a publishable [template](/v4/temple8).
 
 <a name="paginating-for-telegram"></a>
 ### Paginating Query Results
 
-Use the `telegramPaginate` method (the length-aware, numbered paginator) or `simpleTelegramPaginate` (previous / next only) on the [query builder](/v4/queries) or an [Eloquent query](/v4/eloquent). Pass a `key` — a short identifier used both as the page name and inside the navigation `callback_data`:
+Use the `telegramPaginate` method (the numbered paginator) or `simpleTelegramPaginate` (previous / next only) on the [query builder](/v4/queries) or an [Eloquent query](/v4/eloquent). Pass a `key`: a short identifier used as the page name and inside the navigation `callback_data`:
 
 ```php
 use App\Models\User;
@@ -299,12 +299,15 @@ $users = User::telegramPaginate(perPage: 10, key: 'users');
 $users = User::simpleTelegramPaginate(perPage: 10, key: 'users');
 ```
 
+> [!WARNING]
+> Telegram limits `callback_data` to 64 bytes, and the navigation data is `paginate:<key>:<page>`. Keep the key short; a key that does not fit raises an `InvalidArgumentException` while the keyboard is built.
+
 <a name="telegram-pagination-state"></a>
 ### How Page State Works
 
-Telegram pagination is **stateless**. Instead of a `?page=N` query string, the current page travels inside each navigation button's `callback_data`, in the form `paginate:<key>:<page>`. When the user taps a navigation button, your bot receives a callback query carrying that data, and the paginator reads the requested page directly from it.
+Telegram pagination is **stateless**. Instead of a `?page=N` query string, the current page travels inside each navigation button's `callback_data`, in the form `paginate:<key>:<page>`. When a reader taps a navigation button, your bot receives a callback query carrying that data, and the paginator reads the requested page from it.
 
-Because of this, a paginated bot screen is built from **two listeners**: one that sends the first page, and one that handles navigation taps by re-rendering the requested page:
+A paginated screen is therefore built from **two listens**: one that sends the first page, and one that answers the taps. The second one is registered with the `onPaginate` method, which matches the navigation of a single key and hands your handler the page that was tapped:
 
 ```php
 use App\Models\User;
@@ -312,46 +315,83 @@ use LaraGram\Request\Request;
 use LaraGram\Support\Facades\Bot;
 
 // Send the first page...
-Bot::onText('users', function () {
+Bot::onCommand('users', function () {
     return template('users', [
         'paginator' => User::telegramPaginate(10, key: 'users'),
     ]);
 });
 
-// Handle previous / next taps...
-Bot::onCallbackQueryData('paginate:users:{page}', function (Request $request, $page) {
+// Answer the taps on its keyboard...
+Bot::onPaginate('users', function (Request $request, int $page) {
+    $request->answerCallbackQuery();
+
     return template('users', [
         'paginator' => User::telegramPaginate(10, page: $page, key: 'users'),
-        'method' => 'editMessageText',
     ]);
 });
 ```
 
-The navigation listener passes an explicit `page` (from the matched pattern) and sets `method` to `editMessageText`, so tapping a button **edits the existing message in place** rather than sending a new one. The first listener omits `method`, so it defaults to `sendMessage`.
+Both listens render the same template. The paginator knows which of the two it is in: the first page is **sent**, and a tap **edits the message the button belongs to**, so the screen stays in place instead of filling the chat with copies. The `method`, `isNavigating` and `messageId` methods expose that decision:
 
-<a name="rendering-telegram-pagination"></a>
-### Rendering the Keyboard
-
-Inside your [template](/v4/templates), render the message and attach the paginator's inline keyboard with `@reply_markup`. The `@method` directive picks between sending and editing based on the data you passed in:
-
-```blade
-@isset($method)
-    @method($method)
-@endisset
-
-@foreach ($paginator as $user)
-    {{ $user->name }}
-@endforeach
-
-@reply_markup($paginator->keyboard())
+```php
+$paginator->isNavigating();  // true when the current update is a tap on this paginator
+$paginator->method();        // "sendMessage", or "editMessageText" while navigating
+$paginator->messageId();     // the message being edited, or null
 ```
 
-The `keyboard` method automatically produces a **numbered** keyboard for `telegramPaginate` and a simple **previous / next** keyboard for `simpleTelegramPaginate`.
+Methods may be swapped out when the screen is not a plain text message, for instance a photo with a caption:
+
+```php
+$paginator->methods(send: 'sendPhoto', edit: 'editMessageCaption');
+```
+
+<a name="rendering-telegram-pagination"></a>
+### Rendering the Screen
+
+The `@paginate` directive turns a paginator into the parts of the message that navigate it: the inline keyboard, the method, and the message being edited. Everything else in the template is yours:
+
+```blade
+{{-- app/templates/users.t8.php --}}
+
+@parse_mode(html)
+
+@text
+<b>Users</b>
+
+@foreach ($paginator as $user)
+• {{{ $user->name }}}
+@endforeach
+@endtext
+
+@paginate($paginator)
+```
+
+The directive uses the `$paginator` variable when it is given no argument, and never overrides a `@method`, `@message_id` or `@reply_markup` you wrote yourself. To attach only the keyboard, use `@reply_markup($paginator->keyboard())`.
+
+A numbered keyboard is built for `telegramPaginate` and a previous / next keyboard for `simpleTelegramPaginate`.
+
+<a name="telegram-pagination-without-a-template"></a>
+### Rendering Without a Template
+
+A paginator can also render itself, which is convenient for simple lists. The `heading` method sets the line above the results, and `formatUsing` turns each item into a line:
+
+```php
+return User::telegramPaginate(10, key: 'users')
+    ->heading('Users')
+    ->formatUsing(fn (User $user) => "#{$user->id} {$user->name}")
+    ->render();
+```
+
+Without a formatter, an item is printed as a string, or by its `title`, `name` or `id` attribute. The `render` method accepts the name of your own template as its first argument, and extra data as its second:
+
+```php
+$users->render('users.index', ['group' => $group]);
+```
 
 <a name="customizing-telegram-labels"></a>
-### Customizing Labels and Layout
+### Customizing Labels and the Window
 
-The paginator exposes fluent helpers to adjust the button labels, the page indicator, and text direction:
+The paginator exposes fluent helpers for the button labels, the page indicator and the direction of the keyboard:
 
 ```php
 $users = User::telegramPaginate(10, key: 'users')
@@ -359,26 +399,58 @@ $users = User::telegramPaginate(10, key: 'users')
     ->indicator('{current} / {last}')
     ->rightToLeft();
 
-// Hide the middle page indicator entirely...
+// Hide the page indicator entirely...
 $users->withoutIndicator();
 ```
 
-Since the Telegram paginator mirrors the web API, all of the standard instance methods — `previousPageUrl`, `nextPageUrl`, `getUrlRange`, `onFirstPage`, `hasMorePages`, `currentPage`, `lastPage`, and so on — work unchanged, except they return `callback_data` instead of URLs. Telegram-named aliases (`previousPageData`, `nextPageData`, `pageData`, `getDataRange`) are also available.
+The indicator format may use the `{current}`, `{last}`, `{total}`, `{from}`, `{to}` and `{perPage}` placeholders. A simple paginator shows the current page between its buttons; a numbered one marks the current page instead, and only adds an indicator when you set one. Keyboards follow the locale of your application on their own, so `rightToLeft` and `leftToRight` are only needed to force a direction. The labels fall back to the `pagination.previous` and `pagination.next` [translation keys](/v4/localization).
 
-<a name="publishing-telegram-templates"></a>
-### Customizing the Keyboard Template
+A keyboard row has far less room than a web page, so a numbered keyboard shows one page on each side of the current one. Use `onEachSide` to widen or narrow that window, and `pages` to read it:
 
-The navigation keyboard is itself a publishable template, so you have full control over its layout — button order, indicator placement, grouping — without touching any PHP. Publish the templates with the `laragram-pagination` tag:
+```php
+$users->onEachSide(2);
 
-```shell
-php laragram vendor:publish --tag=laragram-pagination
+$users->pages(); // [1, 2, 3, 4, 5]
 ```
 
-This publishes two keyboard templates: a numbered one (used by `telegramPaginate`) and a simple previous / next one (used by `simpleTelegramPaginate`). You may also point a single paginator instance at a custom template with `keyboardTemplate`:
+Since the Telegram paginator mirrors the web API, all of the standard instance methods — `previousPageUrl`, `nextPageUrl`, `getUrlRange`, `onFirstPage`, `hasMorePages`, `currentPage`, `lastPage`, and so on — work unchanged, except that they return `callback_data` instead of URLs. Telegram-named aliases (`previousPageData`, `nextPageData`, `pageData`, `getDataRange`) are available as well.
+
+<a name="publishing-telegram-templates"></a>
+### Customizing the Pagination Templates
+
+The message and both navigation keyboards are ordinary templates, so you may take control of their layout — button order, indicator placement, grouping — without writing any PHP. Publish them with the `pagination-templates` tag:
+
+```shell
+php laragram vendor:publish --tag=pagination-templates
+```
+
+This publishes `app/templates/vendor/pagination/telegram.t8.php` (the message) along with `keyboard.t8.php` and `simple-keyboard.t8.php` (the navigation), which look like this:
+
+```blade
+<!-- !component! -->
+
+@keyboard('inline')
+
+@row
+@if (! $paginator->onFirstPage())
+@col($paginator->resolvedPreviousText(), callback_data: $paginator->previousPageData())
+@endif
+@if ($paginator->hasMorePages())
+@col($paginator->resolvedNextText(), callback_data: $paginator->nextPageData())
+@endif
+@endrow
+
+@endkeyboard
+```
+
+> [!NOTE]
+> A keyboard template only builds a keyboard, so it starts with the `<!-- !component! -->` marker that keeps a template from sending a request of its own. See [disable request](/v4/temple8#disable-request).
+
+A single paginator may also be pointed at a template of its own:
 
 ```php
 $users = User::telegramPaginate(10, key: 'users')
-    ->keyboardTemplate('my::pagination-keyboard');
+    ->keyboardTemplate('pagination.compact');
 ```
 
 <a name="customizing-the-pagination-view"></a>
@@ -396,10 +468,10 @@ By default, the views rendered to display the pagination links are compatible wi
 However, the easiest way to customize the pagination views is by exporting them to your `resources/views/vendor` directory using the `vendor:publish` command:
 
 ```shell
-php laragram vendor:publish --tag=laragram-pagination
+php laragram vendor:publish --tag=pagination-views
 ```
 
-This command will place the views in your application's `resources/views/vendor/pagination` directory. The `tailwind.blade.php` file within this directory corresponds to the default pagination view. You may edit this file to modify the pagination HTML.
+This command will place the views in your application's `resources/views/vendor/pagination` directory. The `laragram-pagination` tag publishes both the web views and the [Telegram templates](#publishing-telegram-templates). The `tailwind.blade.php` file within this directory corresponds to the default pagination view. You may edit this file to modify the pagination HTML.
 
 If you would like to designate a different file as the default pagination view, you may invoke the paginator's `defaultView` and `defaultSimpleView` methods within the `boot` method of your `App\Providers\AppServiceProvider` class:
 

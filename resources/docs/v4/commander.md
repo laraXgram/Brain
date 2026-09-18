@@ -24,6 +24,103 @@ If you are using [LaraGram Armada](/armada) as your local development environmen
 ./vendor/bin/armada laragram list
 ```
 
+<a name="probe"></a>
+### Probe (REPL)
+
+[LaraGram Probe](https://github.com/laraxgram/probe) is a powerful REPL for the LaraGram framework. It ships with its own interactive shell — no external REPL is installed alongside it — and boots your whole application in the terminal, so you can talk to your bot, your models and your services line by line.
+
+<a name="installation"></a>
+#### Installation
+
+New LaraGram applications include Probe out of the box. If you removed it, bring it back with Composer:
+
+```shell
+composer require laraxgram/probe
+```
+
+<a name="usage"></a>
+#### Usage
+
+To enter the Probe environment, run the `probe` Commander command:
+
+```shell
+php laragram probe
+```
+
+Everything your application can do is one line away — send a message through the [Bot API](/v4/requests), query [Eloquent models](/v4/eloquent), dispatch a [job](/v4/queues), render a [template](/v4/temple8), or count the audience of a [broadcast](/v4/broadcasting):
+
+```php
+>>> Request::connection('main')->sendMessage(123456789, 'Hello from Probe!')->message_id;
+=> 4217
+
+>>> User::where('is_admin', true)->count();
+=> 3
+
+>>> Broadcast::users()->language('fa')->count();
+=> 1204
+
+>>> template('welcome', ['name' => 'Amir'])->render();
+```
+
+You may also run a single expression without entering the shell:
+
+```shell
+php laragram probe --execute="User::count()"
+```
+
+Files may be included before the session starts, which is handy for scratch scripts:
+
+```shell
+php laragram probe scratch.php
+```
+
+You may publish Probe's configuration file using the `vendor:publish` command:
+
+```shell
+php laragram vendor:publish --provider="LaraGram\Probe\ProbeServiceProvider"
+```
+
+> [!WARNING]
+> The `dispatch` helper function and the `dispatch` method of the `Dispatchable` trait rely on garbage collection to place the job on the queue. When working in Probe, dispatch jobs with `Bus::dispatch` or `Queue::push` instead.
+
+> [!NOTE]
+> Probe runs against your real configuration, so a call such as `sendMessage` reaches Telegram for real. Use a development bot connection, or `Request::mode(Mode::NO_RESPONSE_CURL)`, while experimenting.
+
+<a name="command-allow-list"></a>
+#### Command Allow List
+
+Probe uses an "allow" list to decide which Commander commands may be run inside its shell. By default you may run the `clear-compiled`, `down`, `env`, `inspire`, `migrate`, `migrate:install`, `optimize`, and `up` commands. To allow more, add them to the `commands` array of your `probe.php` configuration file:
+
+```php
+'commands' => [
+    // App\Console\Commands\ExampleCommand::class,
+],
+```
+
+<a name="classes-that-should-not-be-aliased"></a>
+#### Aliasing Classes
+
+Probe automatically aliases the classes of your application as you interact with them, so `User::count()` works without a `use` statement. Classes in your vendor directory are not aliased; list the ones you want in the `alias` array, and the ones that should never be aliased in `dont_alias`:
+
+```php
+'alias' => [
+    LaraGram\Support\Facades\Broadcast::class,
+],
+
+'dont_alias' => [
+    App\Models\User::class,
+],
+```
+
+<a name="trusting-the-project"></a>
+#### Trusting the Project
+
+Probe loads the local project's autoloader and configuration only in a trusted project. New applications set `PROBE_TRUST_PROJECT=always`; set it to `prompt` to be asked once per project, or `never` to keep the shell restricted:
+
+```php
+'trust_project' => env('PROBE_TRUST_PROJECT', 'always'),
+```
+
 <a name="writing-commands"></a>
 ## Writing Commands
 

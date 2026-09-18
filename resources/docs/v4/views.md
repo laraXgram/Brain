@@ -31,7 +31,7 @@ Route::get('/', function () {
 <a name="writing-views-in-react-svelte-or-vue"></a>
 ### Writing Views in React / Svelte / Vue
 
-Instead of writing their frontend templates in PHP via Blade, many developers have begun to prefer to write their templates using React, Svelte, or Vue. LaraGram makes this painless thanks to [Luna.js](https://laraxgram.github.io/v4/luna), a library that makes it a cinch to tie your React / Svelte / Vue frontend to your LaraGram backend without the typical complexities of building an SPA.
+Instead of writing their frontend templates in PHP via Blade, many developers have begun to prefer to write their templates using React, Svelte, or Vue. LaraGram makes this painless thanks to [Luna](/v4/luna), a library that makes it a cinch to tie your React / Svelte / Vue frontend to your LaraGram backend without the typical complexities of building an SPA.
 
 Our [React, Svelte, and Vue application starter kits](/v4/starter-kits) give you a great starting point for your next LaraGram application powered by Luna.
 

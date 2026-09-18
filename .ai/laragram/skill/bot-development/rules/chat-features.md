@@ -102,5 +102,5 @@ Payloads are limited to 64 characters of `A-Z`, `a-z`, `0-9`, `_` and `-`; never
 ## Groups, Channels and Membership
 
 - Chat events have their own verbs: `onNewChatMembers`, `onLeftChatMember`, `onChatJoinRequest` (approve with `approveChatJoinRequest`), `onMyChatMember` (the bot was added, blocked, or promoted), and `onChatMember` (requires `chat_member` in `allowed_updates`).
-- Bot API errors are returned, not thrown: a user who blocked the bot yields `['ok' => false, 'error_code' => 403, ...]`. Check `ok`, mark such users inactive, and skip them in future broadcasts.
+- Bot API errors are returned, not thrown: a user who blocked the bot yields `['ok' => false, 'error_code' => 403, ...]`. Check `ok` when the result matters. Broadcasts handle this automatically: the `TrackChats` middleware and `Broadcast` mark blocked chats unreachable and skip them.
 - In groups with privacy mode enabled, the bot only receives commands, replies to its own messages, and mentions. Don't rely on `onText` catching every group message unless privacy mode is disabled.

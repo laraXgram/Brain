@@ -86,12 +86,45 @@ class ApplicationInfo extends Tool
                 'enabled' => (bool) config('bot.anti_flood.enabled', false),
                 'store' => config('bot.anti_flood.store'),
             ],
+            'broadcasting' => $this->broadcasting(),
             'api_server_endpoint' => config('bot.api_server.endpoint'),
             'listen_files' => is_dir($listens)
                 ? array_map(fn (string $file): string => 'listens/'.basename($file), glob($listens.DIRECTORY_SEPARATOR.'*.php') ?: [])
                 : [],
             'templates_path' => is_dir(app_path('templates')) ? 'app/templates' : null,
             'conversations_path' => is_dir(app_path('Conversations')) ? 'app/Conversations' : null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function broadcasting(): ?array
+    {
+        if (! class_exists(\LaraGram\Broadcasting\BroadcastManager::class)) {
+            return null;
+        }
+
+        $bootstrap = base_path('bootstrap/app.php');
+        $bootstrap = is_file($bootstrap) ? (string) file_get_contents($bootstrap) : '';
+
+        return [
+            'default_connection' => config('broadcasting.default'),
+            'drivers' => array_map(
+                fn ($connection) => $connection['driver'] ?? null,
+                (array) config('broadcasting.connections', [])
+            ),
+            'channels_file' => is_file(base_path('listens/channels.php')) ? 'listens/channels.php' : null,
+            'with_broadcasting' => str_contains($bootstrap, 'withBroadcasting('),
+            'tracks_chats' => str_contains($bootstrap, 'TrackChats'),
+            'store' => config('broadcasting.store'),
+            'store_driver' => config('broadcasting.stores.'.config('broadcasting.store').'.driver'),
+            'tracks_members' => (bool) config('broadcasting.tracking.members', true),
+            'recallable_by_default' => (bool) config('broadcasting.recall.enabled', false),
+            'audiences' => app()->bound(\LaraGram\Broadcasting\Telegram\AudienceRegistry::class)
+                ? array_keys(app(\LaraGram\Broadcasting\Telegram\AudienceRegistry::class)->all()->all())
+                : [],
+            'progress_store' => config('broadcasting.progress.store') ?? config('cache.default'),
         ];
     }
 

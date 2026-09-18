@@ -144,6 +144,38 @@ questions; LaraGram sends them one by one, validates each reply, collects the an
 back when the flow completes. State is persisted automatically between updates, so a conversation
 survives across the many separate requests a webhook bot receives.
 
+<a name="broadcasting"></a>
+
+### Broadcasting
+
+Sending an announcement to every user of a bot used to mean a hand-written loop, a queue, and careful
+error handling. [**Broadcasting**](/v4/broadcasting) turns it into one line:
+`Broadcast::users()->sendMessage('Hello!')->queue()`. Any Bot API call or template can be delivered to all users, all
+groups, all channels, or your own audiences. LaraGram records the chats your bot can reach, splits the
+work into queued jobs, paces it with anti-flood, skips chats that blocked the bot, and tracks progress.
+Broadcasts can be filtered by language, activity, tags and group membership, render Temple8 templates
+per recipient in their own language, be scheduled or limited to delivery hours, and be edited or
+recalled after they are sent.
+The same component broadcasts events to Mini Apps and web pages over WebSockets through Redis.
+
+<a name="bot-api-client"></a>
+
+### A Typed Bot API Client
+
+The [Bot API client](/v4/requests#methods) is generated from the Bot API itself, and now documents what each call gives back as well as what it takes, so an editor completes both sides of a request. A response reads as the array Telegram sent, as the object the method returns (`$request->getMe()->first_name`) or through its own helpers (`isOk()`, `description()`, `toArray()`). Failures are no longer strings to be parsed: `$request->throw()` raises the exception that matches the failure — a blocked bot, a migrated group, a flood wait with its `retryAfter()` — and every Bot API type has a class with one `init` parameter per field for building payloads, and `from()` for reading them back as objects.
+
+<a name="rich-messages"></a>
+
+### Rich Messages
+
+Telegram's rich messages carry a small HTML document instead of a line of text.
+[**Rich messages**](/v4/rich-messages) bring them into Temple8: `@rich` turns simplified markup into a
+`sendRichMessage` call, short tags replace Telegram's verbose ones, `@richPhoto` and friends register
+local files and `file_id`s in the message's media array, and `@richTable`, `@richList` and
+`@richChecklist` build markup from PHP arrays. Loops, conditions, includes, components and layouts all
+work inside a block, the markup is validated against Telegram's tags and limits before it is sent, and
+the same payload can be built from PHP with the `RichMessage` class.
+
 <a name="api-resources-pagination"></a>
 
 ### API Resources, Pagination & Precognition

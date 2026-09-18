@@ -87,6 +87,7 @@ Bot::onInlineQuery($action)
 Bot::onChosenInlineResult($action)
 Bot::onCallbackQuery($action)
 Bot::onCallbackQueryData($pattern, $action)
+Bot::onPaginate($key, $action)
 Bot::onShippingQuery($action)
 Bot::onPreCheckoutQuery($action)
 Bot::onPollAnswer($action)
@@ -174,6 +175,23 @@ Bot::onChatBoost($action)
 Bot::onRemovedChatBoost($action)
 Bot::onManagedBot($action)
 Bot::onPollUpdate($action)
+```
+
+<a name="pagination-listens"></a>
+#### Pagination Listens
+
+The `onPaginate` method registers a listen for the navigation keyboard of a [Telegram paginator](/v4/pagination#telegram-bot-pagination). It takes the key the paginator was created with, and hands your handler the page that was tapped:
+
+```php
+use LaraGram\Request\Request;
+
+Bot::onPaginate('users', function (Request $request, int $page) {
+    $request->answerCallbackQuery();
+
+    return template('users', [
+        'paginator' => User::telegramPaginate(10, page: $page, key: 'users'),
+    ]);
+});
 ```
 
 Sometimes you may need to register a listen that responds to multiple Bot verbs. You may do so using the `match` method:
@@ -274,18 +292,18 @@ By default, your application's listens are configured and loaded by the `bootstr
 use LaraGram\Foundation\Application;
 
 return Application::configure(basePath: dirname(__DIR__))
-    ->withListener(
+    ->withListening(
         bot: __DIR__.'/../listens/bot.php',
         commands: __DIR__.'/../listens/console.php',
     )->create();
 ```
 
-However, sometimes you may want to define an entirely new file to contain a subset of your application's listens. To accomplish this, you may provide a `then` closure to the `withListener` method. Within this closure, you may register any additional listens that are necessary for your application:
+However, sometimes you may want to define an entirely new file to contain a subset of your application's listens. To accomplish this, you may provide a `then` closure to the `withListening` method. Within this closure, you may register any additional listens that are necessary for your application:
 
 ```php
 use LaraGram\Support\Facades\Bot;
 
-->withListener(
+->withListening(
     bot: __DIR__.'/../listens/bot.php',
     commands: __DIR__.'/../listens/console.php',
     then: function () {
@@ -296,12 +314,12 @@ use LaraGram\Support\Facades\Bot;
 )
 ```
 
-Or, you may even take complete control over listen registration by providing a `using` closure to the `withListener` method. When this argument is passed, no Bot listens will be registered by the framework and you are responsible for manually registering all listens:
+Or, you may even take complete control over listen registration by providing a `using` closure to the `withListening` method. When this argument is passed, no Bot listens will be registered by the framework and you are responsible for manually registering all listens:
 
 ```php
 use LaraGram\Support\Facades\Bot;
 
-->withListener(
+->withListening(
     commands: __DIR__.'/../listens/console.php',
     using: function () {
         Bot::middleware('bot')
@@ -313,7 +331,7 @@ use LaraGram\Support\Facades\Bot;
 <a name="assigning-listen-files-to-connections"></a>
 ### Assigning Listen Files to Connections
 
-If your application uses multiple bot connections, you may assign each listen file to one or more specific connections. To do so, pass an array to the `bot` argument of the `withListener` method. Each element may be either a plain file path, which registers the file for all connections, or a `path => connection` pair, which limits the file to the given connection(s):
+If your application uses multiple bot connections, you may assign each listen file to one or more specific connections. To do so, pass an array to the `bot` argument of the `withListening` method. Each element may be either a plain file path, which registers the file for all connections, or a `path => connection` pair, which limits the file to the given connection(s):
 
 ```php
 <?php
@@ -321,7 +339,7 @@ If your application uses multiple bot connections, you may assign each listen fi
 use LaraGram\Foundation\Application;
 
 return Application::configure(basePath: dirname(__DIR__))
-    ->withListener(
+    ->withListening(
         bot: [
             __DIR__.'/../listens/bot.php', // All connections
             __DIR__.'/../listens/first.php' => 'first-bot', // A specific connection

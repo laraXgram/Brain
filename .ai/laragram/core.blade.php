@@ -23,6 +23,12 @@ use LaraGram\Brain\Discovery\Enums\Approach;
 @if($assist->bot()->usesAntiFlood())
 - Anti-flood pacing is enabled: never add `sleep()` between Bot API calls; broadcasts are paced automatically.
 @endif
+@if($assist->bot()->supportsBroadcasting())
+- To send Bot API calls or a template to many chats (all users, all groups, the members of a group, a filtered segment), use the `Broadcast` facade (`Broadcast::users()->language('fa')->template('promo')->localized()->queue()`), never a loop over chat ids. Bot API methods take Laraquest's own parameters without the recipient. Define custom audiences in `listens/channels.php`, schedule with `later()` / `between()` / `Schedule::broadcast()`, and preview with `->count()` and `->test($chatId)` before sending.
+@if(! $assist->bot()->tracksChats())
+- Chat tracking is not set up yet: before relying on `Broadcast::users()` / `groups()`, run `{{ $assist->commanderCommand('install:broadcasting') }}` and migrate.
+@endif
+@endif
 - Keep bot state per user in the cache or database. Never rely on PHP static properties or globals between updates.
 @php
 $conventions = array_values(array_filter([

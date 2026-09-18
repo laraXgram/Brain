@@ -33,6 +33,6 @@ return OrderResource::collection(Order::with('items')->latest()->paginate());
 ## Paginate Every Unbounded List
 
 - Web and API: `paginate()` for numbered pages, `simplePaginate()` for previous/next, and `cursorPaginate()` for large or frequently changing tables. Resources wrap pagination metadata automatically; Luna uses `Luna::scroll()` for infinite scroll.
-- Bots: `telegramPaginate(perPage: 10, key: 'orders')` or `simpleTelegramPaginate(...)`. Navigation buttons carry `paginate:<key>:<page>` in `callback_data`, so add a `Bot::onCallbackQueryData('paginate:orders:{page}', ...)` listen that re-renders with `page: $page` and `editMessageText`, and attach `$paginator->keyboard()`.
+- Bots: `telegramPaginate(perPage: 10, key: 'orders')` or `simpleTelegramPaginate(...)`. Navigation buttons carry `paginate:<key>:<page>` in `callback_data`, so add a `Bot::onPaginate('orders', fn (Request $request, int $page) => ...)` listen that re-renders the same template with `page: $page`, and put `@paginate($paginator)` in that template so the keyboard is attached and the message is edited in place.
 - Use a distinct `key` per paginated screen so two lists don't read each other's page.
 - Never `->get()` a whole table to paginate or count in PHP; let the database do it.

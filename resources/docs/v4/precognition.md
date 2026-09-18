@@ -8,7 +8,7 @@ LaraGram Precognition allows you to anticipate the outcome of a future HTTP requ
 When LaraGram receives a "precognitive request", it will execute all of the route's middleware and resolve the route's controller dependencies, including validating [form requests](/v4/validation#form-request-validation) - but it will not actually execute the route's controller method.
 
 > [!NOTE]
-> As of Luna, Precognition support is built-in. Please consult the [Luna Forms documentation](https://laraxgram.github.io/v4/luna-forms) for more information. Earlier Luna versions require Precognition 0.x.
+> As of Luna, Precognition support is built-in. Please consult the [Luna Forms documentation](/v4/luna-forms) for more information. Earlier Luna versions require Precognition 0.x.
 
 <a name="live-validation"></a>
 ## Live Validation

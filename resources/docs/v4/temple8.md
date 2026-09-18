@@ -30,8 +30,8 @@ You may display the contents of the `name` variable like so:
 Hello, {{ $name }}.
 ```
 
-> [!NOTE]
-> Template's `{{ }}` echo statements are automatically sent through PHP's `htmlspecialchars` function.
+> [!WARNING]
+> Unlike Blade, Template's <code v-pre>{{ }}</code> echo statements are **not** escaped. A message is usually formatted with Telegram's HTML or MarkdownV2 parse mode, and most of what a template echoes is content you built yourself, so <code v-pre>{{ }}</code> sends the value as it is.
 
 You are not limited to displaying the contents of the variables passed to the template. You may also echo the results of any PHP function. In fact, you can put any PHP code you wish inside of a Template echo statement:
 
@@ -39,14 +39,19 @@ You are not limited to displaying the contents of the variables passed to the te
 The current UNIX timestamp is {{ time() }}.
 ```
 
-<a name="displaying-unescaped-data"></a>
-#### Displaying Unescaped Data
+<a name="displaying-escaped-data"></a>
+#### Displaying Escaped Data
 
-By default, Template `{{ }}` statements are automatically sent through PHP's `htmlspecialchars` function. If you do not want your data to be escaped, you may use the following syntax:
+Anything a user can influence should be escaped, so that a name such as `<b>Sam` cannot change the formatting of your message. Wrap the value in three braces to send it through PHP's `htmlspecialchars` function:
 
 ```blade
-Hello, {!! $name !!}.
+Hello, {{{ $name }}}.
 ```
+
+`{!! $name !!}` is accepted as well and, like <code v-pre>{{ }}</code>, echoes the value unescaped.
+
+> [!NOTE]
+> Escaping with <code v-pre>{{{ }}}</code> produces HTML entities, which suits `@parse_mode(html)` and [rich messages](/v4/rich-messages). When a message uses MarkdownV2, escape the value for Markdown instead.
 
 <a name="temple8-directives"></a>
 ## Template Directives
@@ -69,6 +74,9 @@ Hello
 ```
 
 The `chat_id` input is optional. if not defined, it will default to the `chat_id` from the current request.
+
+> [!TIP]
+> Templates can also be sent to many chats at once with [Telegram broadcasts](/v4/broadcasting#templates): `Broadcast::users()->template('welcome')->queue()` renders the template (file, inline, rich message, components…) for every recipient, with `chat()` and `user()` pointing to that recipient.
 
 <a name="method-field"></a>
 ### Method Field
@@ -155,6 +163,58 @@ You may set keyboard options such as `resize_keyboard` or `one_time_keyboard` us
     @endRow
 @endKeyboard()
 ```
+
+<a name="keyboard-direction"></a>
+#### Keyboard Direction
+
+Keyboards follow the locale of your application, flipping the columns of every row for right-to-left languages. The `@keyboardDirection` directive forces a direction instead:
+
+```blade
+@keyboard(inline)
+    @keyboardDirection(rtl)
+
+    @row()
+        @col('Previous', callback_data: 'prev')
+        @col('Next', callback_data: 'next')
+    @endRow
+@endKeyboard()
+```
+
+The directive accepts `rtl`, `ltr`, or an expression that evaluates to a boolean.
+
+<a name="pagination-directive"></a>
+### Pagination
+
+The `@paginate` directive turns a [Telegram paginator](/v4/pagination#telegram-bot-pagination) into the parts of the message that navigate it: the inline keyboard, the method that keeps the screen in place while the reader moves between pages, and the message being edited:
+
+```blade
+@text
+@foreach ($paginator as $user)
+{{{ $user->name }}}
+@endforeach
+@endtext
+
+@paginate($paginator)
+```
+
+The directive uses the `$paginator` variable when it is given no argument, and never overrides a `@method`, `@message_id` or `@reply_markup` written in the template.
+
+<a name="rich-messages"></a>
+### Rich Messages
+
+Telegram's rich messages are written with the `@rich` directive, which turns a small HTML document into a `sendRichMessage` call:
+
+```blade
+@rich
+    <h1>Daily Report</h1>
+
+    <p>Hello <b>{{{ $user->first_name }}}</b>, here is today's summary.</p>
+
+    @richTable($rows, headers: ['Product', 'Units'], bordered: true)
+@endrich
+```
+
+Everything on this page works inside a rich block, including loops, conditions, includes, components and layouts. Rich messages have a documentation page of their own; see [rich messages](/v4/rich-messages).
 
 <a name="if-statements"></a>
 ### If Statements
@@ -631,7 +691,7 @@ public function shouldRender(): bool
 ### Disable request
 
 Each template file is automatically converted into a Telegram request. However, when using components, multiple template files may be called simultaneously, which can cause conflicts between requests.
-By placing the phrase `<!-- !component! -->` at the beginning of a template file, that file will not be converted into a Telegram request.
+By placing the phrase `<!-- !component! -->` at the beginning of a template file, that file will not be converted into a Telegram request. The marker is a compile time hint, so it is removed from the template's output and never reaches the message.
 
 ```php
 <!-- !component! -->
@@ -1231,6 +1291,9 @@ The `@yield` directive also accepts a default value as its second parameter. Thi
 ```blade
 @yield('content', 'Default content')
 ```
+
+> [!NOTE]
+> The layout is what becomes the Telegram request: a child template that `@extends` a layout never sends a request of its own, so the inputs of the message — `@text`, `@rich`, `@keyboard`, `@parse_mode` and the rest — belong in the layout, and the child fills its sections.
 
 <a name="validation-errors"></a>
 ### Validation Errors

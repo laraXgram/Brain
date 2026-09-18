@@ -11,8 +11,9 @@
 - The application is configured in `bootstrap/app.php` with `Application::configure()`:
   - `withListener(bot: ..., client: ..., commands: ...)` registers the bot listen files (`listens/bot.php`), MTProto client listen files, and closure console commands (`listens/console.php`). A listen file may be bound to specific bot connections with `path => 'connection'` pairs.
   - `withRouting(web: ..., api: ..., health: ...)` registers web routes, only when the application serves HTTP.
+  - `withBroadcasting(__DIR__.'/../listens/channels.php')` loads broadcast audiences and WebSocket channel authorization (for every entry point, including queue workers).
   - `withMiddleware()` and `withExceptions()` configure middleware and exception handling.
-- Bot connections (tokens, webhook URLs, secret tokens) live in `config/bot.php`; Bot API request defaults live in `config/laraquest.php`; anti-flood throttling is configured under `bot.anti_flood`.
+- Bot connections (tokens, webhook URLs, secret tokens) live in `config/bot.php`; Bot API request defaults live in `config/laraquest.php`; anti-flood throttling is configured under `bot.anti_flood`; broadcast connections, the broadcast store (`database`, `redis` or `null`), chat tracking and progress storage live in `config/broadcasting.php`.
 - `public/index.php` sends Telegram updates (JSON bodies with an `update_id`) to the bot kernel and every other request to the web kernel.
 - Templates live in `app/templates` (`*.t8.php`, Temple8), conversations in `app/Conversations`, bot controllers in `app/Controllers`, and Blade views in `resources/views`.
 - Service providers are listed in `bootstrap/providers.php`. Command classes live in `app/Console/Commands`; closure commands and schedules live in `listens/console.php`.
@@ -25,4 +26,4 @@
 
 ## Telegram Pagination
 
-- Paginate bot screens with `Model::telegramPaginate(perPage: 10, key: 'users')` (numbered) or `simpleTelegramPaginate()` (previous / next). Handle navigation taps with a `Bot::onCallbackQueryData('paginate:users:{page}', ...)` listen that re-renders the page with `page: $page` and `editMessageText`. Attach the navigation with the paginator's `keyboard()` method.
+- Paginate bot screens with `Model::telegramPaginate(perPage: 10, key: 'users')` (numbered) or `simpleTelegramPaginate()` (previous / next). Handle navigation taps with a `Bot::onPaginate('users', fn (Request $request, int $page) => ...)` listen that re-renders the same template with `page: $page`. In the template, `@paginate($paginator)` attaches the keyboard and edits the message in place while the reader moves between pages.

@@ -12,6 +12,7 @@
 - Use `database-schema` to inspect table structure before writing migrations or models.
 - Use `last-error` and `read-log-entries` to read recent application errors, for example after sending the bot a test update.
 - Use `get-absolute-url` to resolve the correct scheme, domain, and port for project URLs (web routes, webhook URLs, Mini App URLs). Always use this before sharing a URL with the user.
+- Try the bot out without touching Telegram: `bot_listens` lists the registered listens, `bot_simulate_update` runs an update through them and returns the matched listen with every Bot API call the handlers made, `bot_render_template` renders a template and returns the call it would send, and `bot_conversation_state` inspects or resets a user's conversation. Prefer them over asking the user to message the bot; they are available when `laraxgram/mcp` is installed.
 @if (config('brain.browser_logs_watcher', true) !== false)
 - Use `browser-logs` to read browser logs, errors, and exceptions from web pages and Telegram Mini Apps. Only recent logs are useful, ignore old entries.
 @endif

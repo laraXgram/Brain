@@ -44,6 +44,14 @@ return [
     'cancel_command' => null,
     'cancel_timeout' => null,
     'forget_after_complete' => true,
+
+    // What the user is told when an answer is rejected.
+    'retry_message' => true,
+    'invalid_choice' => 'Please choose one of the options.',
+
+    // What happens to the keyboard of the last prompt once the flow is over.
+    'clear_keyboard' => true,
+    'keyboard_cleared_text' => null,
 ];
 ```
 
@@ -162,7 +170,7 @@ $questioner->ask('Third?')->name('third');  // stored as "third"
 <a name="validating-answers"></a>
 ### Validating Answers
 
-Attach [validation rules](/v4/validation) to a question with `validate`. When an answer fails, the conversation re-asks the same question (up to the allowed number of attempts) and fires the `onInvalid` hook. You may pass custom messages as the second argument:
+Attach [validation rules](/v4/validation) to a question with `validate`. When an answer fails, the conversation explains why (see [retry messages](#retry-messages)), asks the same question again — up to the allowed number of attempts — and fires the `onInvalid` hook. You may pass custom messages as the second argument:
 
 ```php
 $questioner->ask('How old are you?')
@@ -170,6 +178,19 @@ $questioner->ask('How old are you?')
     ->validate('required|integer|between:1,120', [
         'integer' => 'Please send a number.',
     ]);
+```
+
+<a name="dynamic-prompts"></a>
+### Dynamic Prompts
+
+A prompt may be a closure instead of a string. It receives the answers collected so far, so a question can build itself from what the user has already said:
+
+```php
+use LaraGram\Conversation\AnswersBag;
+
+$questioner->ask(fn (AnswersBag $answers) => "Thanks {$answers->get('name')}! What is your email?")
+    ->name('email')
+    ->validate('required|email');
 ```
 
 <a name="answer-types"></a>
@@ -183,24 +204,76 @@ $questioner->ask('Send your profile photo')->name('avatar')->type('photo');
 $questioner->ask('Share your location')->name('spot')->type('location');
 ```
 
-<a name="keyboards"></a>
-### Attaching Keyboards
+<a name="choices"></a>
+### Offering Choices
 
-Send a [keyboard](/v4/keyboards) with the prompt using the `keyboard` method. Combine it with a `callback` type to accept inline button presses:
+Most questions in a bot are answered with a button rather than with typing. The `choices` method takes the options, builds the keyboard, matches the reply against it, and stores the value you chose — there is no keyboard to build and no callback data to parse:
+
+```php
+$questioner->ask('Choose a plan')
+    ->name('plan')
+    ->choices(['free' => 'Free', 'pro' => 'Pro']);
+```
+
+The array maps the **value that is stored** to the **label the user sees**; a plain list uses each item as both. A closure receives the answers so far and returns the options, so they may depend on earlier replies:
+
+```php
+$questioner->ask('Pick a city')
+    ->name('city')
+    ->choices(fn (AnswersBag $answers) => City::where('country', (string) $answers->get('country'))
+        ->pluck('name', 'id')
+        ->all());
+```
+
+Options are drawn as an inline keyboard, two per row. Use `asReply` for a reply keyboard, and `columns` to change the layout:
+
+```php
+$questioner->ask('Pick a colour')->name('colour')
+    ->choices(['r' => 'Red', 'g' => 'Green', 'b' => 'Blue'])
+    ->asReply()
+    ->columns(3);
+```
+
+Whichever keyboard is used, the answer is the value: an inline button carries it in its callback data, and the text of a reply button is mapped back to it. A reply that matches none of the options is rejected like a failed validation rule.
+
+<a name="multiple-choices"></a>
+#### Multiple Choices
+
+Add `multiple` to let the user select several options. Each tap toggles an option and redraws the keyboard, and the question is answered when the "done" button is tapped. The answer is an array of values:
+
+```php
+$questioner->ask('Which topics interest you?')
+    ->name('topics')
+    ->choices(['php' => 'PHP', 'js' => 'JavaScript', 'go' => 'Go'])
+    ->multiple(done: 'Done', min: 1, max: 2);
+```
+
+<a name="confirmations"></a>
+#### Confirmations
+
+`confirm` is a yes-or-no question whose answer is a boolean:
+
+```php
+$questioner->ask('Do you accept the terms?')->name('terms')->confirm();
+
+$questioner->ask('Ship it?')->name('ship')->confirm(yes: 'Ship it', no: 'Not yet');
+```
+
+<a name="keyboards"></a>
+### Custom Keyboards
+
+When a question needs a keyboard of its own — a request-contact button, a web app button, a layout the options cannot express — pass it with `keyboard`. It accepts a [keyboard builder](/v4/keyboards) instance, an array, or a JSON string, and the conversation adds its own back and skip buttons to it:
 
 ```php
 use LaraGram\Keyboard\Keyboard;
+use LaraGram\Keyboard\Make;
 
-$questioner->ask('Choose a plan')
-    ->name('plan')
-    ->keyboard(
-        Keyboard::inlineKeyboardMarkup(
-            Make::row(
-                Make::callbackData("Free", 'plan:free'),
-                Make::callbackData("Pro", 'plan:pro'),
-            )
-        )->get()
-    );
+$questioner->ask('Share your phone number')
+    ->name('phone')
+    ->type('contact')
+    ->keyboard(Keyboard::replyKeyboardMarkup(
+        Make::row(Make::text('Share', request_contact: true))
+    ));
 ```
 
 <a name="media-prompts"></a>
@@ -216,6 +289,48 @@ $questioner->ask('Scan this code')->photo($fileId);
 
 Available media prompt methods: `photo`, `video`, `audio`, `voice`, `document`, `animation`, `videoNote`, and `sticker` (or `media($kind, $file)` for the generic form). Captions are not supported for `videoNote` and `sticker`.
 
+<a name="template-prompts"></a>
+### Template Prompts
+
+A question may be rendered by a [Temple8 template](/v4/temple8), which gives you everything the template engine offers — formatting, keyboards, [rich messages](/v4/rich-messages), components, translations — inside a conversation:
+
+```php
+$questioner->ask()
+    ->name('plan')
+    ->prompt('Choose a plan')
+    ->template('conversations.plan', ['trial' => $trial])
+    ->choices(['free' => 'Free', 'pro' => 'Pro']);
+```
+
+The template builds the whole message and the conversation only adds its own controls to the keyboard the template produced. Besides the data you pass, every prompt template receives:
+
+<div class="content-list" markdown="1">
+
+- `$prompt` — the question's prompt text.
+- `$answers` — the `AnswersBag` collected so far.
+- `$choices` — the question's options, each with its `value`, `label`, `data` (the callback data of its button) and `selected` flag.
+- `$parameters` — the parameters the conversation was started with.
+- `$step` and `$steps` — the position of the question and the number of questions.
+
+</div>
+
+```blade
+{{-- app/templates/conversations/plan.t8.php --}}
+@parse_mode(html)
+
+@text
+<b>{{ $prompt }}</b> ({{ $step }}/{{ $steps }})
+@endtext
+
+@keyboard(inline)
+    @foreach ($choices as $choice)
+        @row
+            @col($choice['label'], callback_data: $choice['data'])
+        @endRow
+    @endforeach
+@endKeyboard()
+```
+
 <a name="custom-senders"></a>
 ### Custom Senders
 
@@ -230,15 +345,53 @@ $questioner->ask('Pick a color')
 ```
 
 <a name="skipping-questions"></a>
-### Skipping Questions
+### Optional Questions
 
-Allow the user to skip a question by declaring a `skipCommand`. When the user sends that command, the answer is stored as skipped and the `onSkip` hook fires:
+`optional` adds a skip button to the prompt and stores the given value when it is tapped. A `skipCommand` does the same for a command the user types. Either way the `onSkip` hook fires:
 
 ```php
-$questioner->ask('Add a bio (optional)')
+$questioner->ask('Add a bio')
     ->name('bio')
-    ->skipCommand('/skip');
+    ->optional('Skip', default: null);
+
+$questioner->ask('Add a bio')
+    ->name('bio')
+    ->skipCommand('/skip')
+    ->default('');
 ```
+
+<a name="transforming-answers"></a>
+### Transforming Answers
+
+Answers arrive as text. `cast` converts one to a native type, and `transform` runs it through a closure, before it is stored:
+
+```php
+$questioner->ask('How old are you?')->name('age')->validate('integer')->cast('int');
+
+$questioner->ask('What is your username?')
+    ->name('user')
+    ->transform(fn (string $value) => User::firstWhere('username', ltrim($value, '@')));
+```
+
+`cast` understands `int`, `float`, `bool`, `string` and `array`.
+
+<a name="retry-messages"></a>
+### Retry Messages
+
+When an answer is rejected, the conversation tells the user why and asks again. By default the first validation error is sent; `retry` replaces it for a single question, and a closure receives the errors and the attempt number:
+
+```php
+$questioner->ask('Enter the code')
+    ->name('code')
+    ->validate('digits:6')
+    ->retry('The code is six digits. Try again.');
+
+$questioner->ask('Enter the code')
+    ->name('code')
+    ->retry(fn (array $errors, int $attempt) => "{$errors[0]} ({$attempt} of 3)");
+```
+
+Set `retry_message` to `false` in your configuration file, or declare `public $retryMessage = false` on the conversation, to say nothing at all.
 
 <a name="per-question-callbacks"></a>
 ### Per-Question Callbacks
@@ -263,6 +416,92 @@ Override the maximum invalid attempts for a single question with `attempts`:
 
 ```php
 $questioner->ask('Enter the code')->name('code')->attempts(5);
+```
+
+<a name="branching"></a>
+## Branching
+
+Real flows are rarely a straight line: a question may not apply, an answer may make the rest of the flow pointless, and a wrong turn may need to be undone.
+
+<a name="conditional-questions"></a>
+### Conditional Questions
+
+`when` and `unless` decide whether a question is asked at all. The closure receives the answers collected so far, and is evaluated when the conversation reaches the question:
+
+```php
+$questioner->ask('Personal or business?')
+    ->name('type')
+    ->choices(['personal' => 'Personal', 'business' => 'Business']);
+
+$questioner->ask('What is the company name?')
+    ->name('company')
+    ->when(fn (AnswersBag $answers) => (string) $answers->get('type') === 'business');
+
+$questioner->ask('Add a VAT number')
+    ->name('vat')
+    ->unless(fn (AnswersBag $answers) => $answers->get('company')->isSkipped());
+```
+
+A question that does not apply is passed over silently and leaves no answer behind. Going back also skips it, returning to the question the user actually saw.
+
+<a name="flow-control"></a>
+### Jumping, Finishing and Cancelling
+
+A question callback or a lifecycle hook may return a `Flow` instruction to steer the conversation:
+
+```php
+use LaraGram\Conversation\Flow;
+
+$questioner->ask('Do you have a coupon?')
+    ->name('coupon')
+    ->confirm()
+    ->then(fn (Request $request, Answer $answer) => $answer->raw()
+        ? null
+        : Flow::goTo('email'));
+
+$questioner->ask('Coupon code')->name('code')->validate('alpha_num');
+
+$questioner->ask('Your email')->name('email')->validate('email');
+```
+
+<div class="content-list" markdown="1">
+
+- `Flow::goTo('name')` — continue with the question of that name.
+- `Flow::repeat()` — ask the current question again.
+- `Flow::finish()` — complete now, keeping the answers collected so far.
+- `Flow::cancel('reason')` — cancel now.
+
+</div>
+
+Inside a conversation class the same instructions are available as `$this->goTo(...)`, `$this->repeat()` and `$this->finish()`:
+
+```php
+public function onAnswer(Request $request, Question $question, Answer $answer)
+{
+    if ($answer->key() === 'plan' && (string) $answer === 'enterprise') {
+        return $this->goTo('contact');
+    }
+}
+```
+
+<a name="conversation-parameters"></a>
+### Parameters
+
+The parameters a conversation is started with are available on the conversation itself, and in every prompt template:
+
+```php
+Conversation::start('Onboarding', ['plan' => 'pro']);
+```
+
+```php
+public function start(): void
+{
+    Conversation::create(function (Questioner $questioner) {
+        $questioner->ask('How many seats?')
+            ->name('seats')
+            ->when(fn () => $this->parameter('plan') === 'pro');
+    });
+}
 ```
 
 <a name="working-with-answers"></a>
@@ -331,9 +570,9 @@ Override any of these methods on your conversation class to react to events duri
 | ---- | ---------- |
 | `onStart(Request $request)` | The conversation begins. |
 | `onAsk(Request $request, Question $question)` | Right before a question is sent. |
-| `onAnswer(Request $request, Question $question, Answer $answer)` | A question receives a valid answer. |
-| `onSkip(Request $request, Question $question)` | A question is skipped via its skip command. |
-| `onBack(Request $request, Question $question)` | The user goes back to the previous question. |
+| `onAnswer(Request $request, Question $question, Answer $answer)` | A question receives a valid answer. May return a [`Flow`](#flow-control). |
+| `onSkip(Request $request, Question $question)` | A question is skipped through its button or command. |
+| `onBack(Request $request, Question $question)` | The user goes back to the previous question. May return a `Flow`. |
 | `onInvalid(Request $request, Question $question, array $errors, int $attempt)` | An answer fails validation. |
 | `onCancel(Request $request, string $reason)` | The conversation is cancelled. |
 | `onComplete(Request $request, AnswersBag $answers)` | Every question has been answered. |
@@ -382,30 +621,59 @@ The cancellation reasons passed to `onCancel` are: `command`, `timeout`, `max_at
 <a name="back-navigation"></a>
 ## Back Navigation
 
-Users can step back to the previous question. Configure back navigation per question with `back` (or disable it with `noBack`):
+Every question but the first carries a back button, which returns to the previous question the user actually saw, clears its answer, fires the `onBack` hook and asks it again.
+
+The button follows the keyboard of the question it belongs to: it joins an inline keyboard as an inline button and a reply keyboard as a reply button, and a question without a keyboard gets an inline one, so no reply keyboard is left behind on the user's screen. Configure it per question with `back`, or turn it off with `noBack`:
 
 ```php
-$questioner->ask('What is your name?')->name('name');
-
 $questioner->ask('How old are you?')
     ->name('age')
-    ->back(mode: 'inline', label: 'Back', callbackData: 'conversation:back');
+    ->back(mode: 'inline', label: '‹ Back');
+
+$questioner->ask('Enter the code')->name('code')->noBack();
 ```
 
-The `mode` may be `reply`, `inline`, `command`, `text`, or `none`. The back control is automatically skipped on the first question.
+The `mode` may be `auto` (the default described above), `reply`, `inline`, `command`, `text`, or `none`. The `command` and `text` modes match what the user types instead of drawing a button:
 
-To enable back navigation for the whole conversation, override the `back` method (or declare a `public ?Back $back` property). Per-question settings are merged field-by-field over the conversation-wide default:
+```php
+$questioner->ask('How old are you?')->name('age')->back(mode: 'command', command: '/back');
+```
+
+To configure back navigation for the whole conversation, override the `back` method (or declare a `public ?Back $back` property). Per-question settings are merged field-by-field over the conversation-wide default:
 
 ```php
 use LaraGram\Conversation\Back;
 
 public function back(): ?Back
 {
-    return Back::make(mode: 'inline', label: 'Back');
+    return Back::make(label: '‹ Back', onFirst: 'cancel');
 }
 ```
 
-When the user goes back, the previous answer is cleared, the `onBack` hook fires, and the question is re-asked.
+`onFirst` decides what the button does on the first question: `hide` (the default) leaves it out, and `cancel` turns it into a way out of the conversation.
+
+<a name="keyboard-clean-up"></a>
+## Keyboard Clean Up
+
+A keyboard that outlives its conversation is confusing, so LaraGram takes the last one back when the flow ends, whether it completed or was cancelled:
+
+<div class="content-list" markdown="1">
+
+- An **inline** keyboard is removed from the message it belongs to.
+- A **reply** keyboard is replaced by every following prompt, and removed at the end — which needs a message of its own, so it is only sent when you provide its text.
+
+</div>
+
+```php
+// On a conversation class...
+public string|bool $clearKeyboard = 'Thanks!';
+
+// Or for every conversation, in config/conversation.php...
+'clear_keyboard' => true,
+'keyboard_cleared_text' => 'Thanks!',
+```
+
+Set `clearKeyboard` to `false` to leave keyboards alone.
 
 <a name="priority"></a>
 ## Priority: Listens vs. Conversation
@@ -467,16 +735,28 @@ Bot::onText('feedback', function () {
 });
 ```
 
-For a single-question flow, `Conversation::ask` is even shorter:
+For a single-question flow, `Conversation::ask` is even shorter. Every method a question understands may be called straight on the builder:
 
 ```php
-Conversation::ask('What is your name?', 'name')
+Conversation::ask('What is your email?', 'email')
+    ->validate('required|email')
+    ->retry('That does not look like an email address.')
     ->onComplete(function (Request $request, AnswersBag $answers) {
-        $request->sendMessage(user()->id, "Hi {$answers->get('name')}!");
+        $request->sendMessage(user()->id, "Thanks, {$answers->get('email')}!");
     });
 ```
 
-The inline builder offers the same settings as a file conversation: `maxAttempts`, `cancelTimeout`, `cancelCommand`, `forgetAfterComplete`, `back`, `noBack`, `priority`, `name`, `with` (parameters), and the `onInvalid`, `onCancel`, and `onComplete` hooks.
+`Conversation::choose` and `Conversation::confirm` are shortcuts for a single question with options:
+
+```php
+Conversation::choose('Choose a plan', ['free' => 'Free', 'pro' => 'Pro'], 'plan')
+    ->onComplete(fn (Request $request, AnswersBag $answers) => Subscription::start($answers->get('plan')->raw()));
+
+Conversation::confirm('Delete your account?', 'sure')
+    ->onComplete(fn (Request $request, AnswersBag $answers) => $answers->get('sure')->raw() ? $user->delete() : null);
+```
+
+The inline builder offers the same settings as a file conversation: `maxAttempts`, `cancelTimeout`, `cancelCommand`, `forgetAfterComplete`, `retryMessage`, `clearKeyboard`, `back`, `noBack`, `priority`, `name`, `with` (parameters), and the `onStart`, `onAsk`, `onAnswer`, `onSkip`, `onBack`, `onInvalid`, `onCancel`, and `onComplete` hooks.
 
 > [!NOTE]
 > Inline conversations serialize their closures to persist across updates, so any variables captured with `use` (or `$this`) must be serializable.

@@ -4,7 +4,7 @@ Webhook bots handle every update in a fresh request, so multi-message flows need
 
 | Use | When |
 | --- | --- |
-| **Conversation** | A linear list of questions with validation, typed answers, skip/back/cancel, and a completion callback |
+| **Conversation** | A guided series of questions: validation, typed answers, option keyboards, branching, skip/back/cancel, and a completion callback |
 | **Step Manager** | Free-form state machines where the next step depends on arbitrary logic, or a single "awaiting input" state |
 
 ## Conversations
@@ -29,11 +29,20 @@ return new class extends BaseConversation
         Conversation::create(function (Questioner $questioner) {
             $questioner->ask('What is your name?')->name('name');
 
-            $questioner->ask('How old are you?')
+            $questioner->ask(fn (AnswersBag $answers) => "How old are you, {$answers->get('name')}?")
                 ->name('age')
-                ->validate('required|integer|between:1,120');
+                ->validate('required|integer|between:1,120')
+                ->cast('int');
 
-            $questioner->ask('Send your profile photo')->name('avatar')->type('photo');
+            $questioner->ask('Choose a plan')
+                ->name('plan')
+                ->choices(['free' => 'Free', 'pro' => 'Pro']);
+
+            $questioner->ask('How many seats?')
+                ->name('seats')
+                ->when(fn (AnswersBag $answers) => (string) $answers->get('plan') === 'pro');
+
+            $questioner->ask('Send your profile photo')->name('avatar')->type('photo')->optional('Skip');
         });
     }
 
@@ -52,11 +61,15 @@ return new class extends BaseConversation
 Start it from a listen with `Conversation::start('Onboarding')`, or register a listen that starts it with `Bot::conversation('register', 'Onboarding')`.
 
 - Keep `start()` declarative: it runs every time the conversation's state is rebuilt, so never perform side effects there. Do the work in `onComplete` or per-question `then()` callbacks.
-- Question options: `name()`, `validate($rules, $messages)`, `type('photo'|'location'|'contact'|...)`, `keyboard(...)`, media prompts (`photo()`, `document()`, ...), `askUsing(fn (Request $request) => ...)`, `skipCommand('/skip')`, `attempts(5)`, `back(...)`/`noBack()`, `priority(Priority::Conversation)`.
-- Answers are `Answer` objects: `text()`, `data()` (callback data), `file()`, `media()`, `download($path, $disk)`, `isSkipped()`; they are `Stringable`.
-- Lifecycle hooks: `onStart`, `onAsk`, `onAnswer`, `onSkip`, `onBack`, `onInvalid`, `onCancel` (reasons: `command`, `timeout`, `max_attempts`, `interrupted`, `manual`), `onComplete`.
+- Never build the option keyboard of a question by hand: `choices(['free' => 'Free', 'pro' => 'Pro'])` (value => label, or a closure of the answers) draws it, matches the reply and stores the value. `asReply()` / `columns(n)` change the layout, `multiple(done: 'Done', min: 1)` collects an array, and `confirm()` asks a yes/no whose answer is a boolean. Keep `keyboard(...)` for what options cannot express (contact, web app, custom layouts); the back and skip buttons are added to whatever keyboard the question has.
+- Prompts: a string, a closure receiving the `AnswersBag`, media (`photo()`, `document()`, ...), or `template('conversations.plan', $data)` which renders a Temple8 template as the whole message (it receives `$prompt`, `$answers`, `$choices`, `$parameters`, `$step`, `$steps`). `askUsing()` sends the prompt yourself and gives up the conversation's keyboard handling.
+- Other question options: `name()`, `validate($rules, $messages)`, `retry('...')`, `type('photo'|'location'|'contact'|...)`, `cast('int')` / `transform(fn ($value) => ...)`, `optional('Skip', default: null)` / `skipCommand('/skip')` / `default($value)`, `attempts(5)`, `then(fn ($request, $answer, $answers) => ...)`, `back(...)`/`noBack()`, `priority(Priority::Conversation)`.
+- Branch with `when()` / `unless()` on a question, and steer from a `then()` callback or a hook by returning `Flow::goTo('name')`, `Flow::repeat()`, `Flow::finish()` or `Flow::cancel()` (inside a class: `$this->goTo(...)`, `$this->repeat()`, `$this->finish()`). Skipped questions leave no answer and are passed over by back navigation too.
+- Answers are `Answer` objects: `text()`, `data()` (callback data), `raw()` (the stored value: a choice value, an array for `multiple()`, a bool for `confirm()`), `file()`, `media()`, `download($path, $disk)`, `isSkipped()`; they are `Stringable`.
+- Lifecycle hooks: `onStart`, `onAsk`, `onAnswer` (may return a `Flow`), `onSkip`, `onBack` (may return a `Flow`), `onInvalid`, `onCancel` (reasons: `command`, `timeout`, `max_attempts`, `interrupted`, `manual`), `onComplete`. Parameters passed to `Conversation::start('Onboarding', ['plan' => 'pro'])` are read with `$this->parameter('plan')`.
+- Rejected answers are explained automatically (the first validation error, or `retry(...)`), and the keyboard of the last prompt is taken back when the flow ends (`clearKeyboard`). A reply keyboard is replaced by every following prompt, so it never outlives the question it belongs to.
 - By default a matching regular or step listen interrupts an active conversation (`regular listen > step listen > conversation > fallback`). Use `Priority::Conversation` for questions that must not be interrupted, such as confirmation codes.
-- For small, one-off flows use `Conversation::inline(fn (Questioner $q) => ...)->onComplete(...)->start()` or `Conversation::ask('What is your name?', 'name')->onComplete(...)`.
+- For small, one-off flows use `Conversation::inline(fn (Questioner $q) => ...)->onComplete(...)->start()`, or the single-question forms `Conversation::ask('Your email?', 'email')->validate('email')->onComplete(...)`, `Conversation::choose('Plan?', [...], 'plan')` and `Conversation::confirm('Delete it?', 'sure')` - every question method may be called straight on the builder.
 
 ## The Step Manager
 

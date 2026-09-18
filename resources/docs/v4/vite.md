@@ -856,7 +856,7 @@ npm run build
 node bootstrap/ssr/ssr.js
 ```
 
-If you are using SSR with Luna, you may instead use the `luna:start-ssr` Commander command to start the SSR server:
+If you are using SSR with Luna, you may instead use the `luna:start-ssr` Artisan command to start the SSR server:
 
 ```shell
 php laragram luna:start-ssr

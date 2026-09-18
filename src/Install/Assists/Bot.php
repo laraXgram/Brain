@@ -43,6 +43,24 @@ class Bot
     }
 
     /**
+     * Determine if the installed core ships Telegram broadcasting.
+     */
+    public function supportsBroadcasting(): bool
+    {
+        return class_exists(\LaraGram\Broadcasting\BroadcastManager::class);
+    }
+
+    /**
+     * Determine if the application records its chats for broadcasting (TrackChats middleware).
+     */
+    public function tracksChats(): bool
+    {
+        $bootstrap = base_path('bootstrap/app.php');
+
+        return is_file($bootstrap) && str_contains((string) file_get_contents($bootstrap), 'TrackChats');
+    }
+
+    /**
      * The listen files relative to the base path.
      *
      * @return list<string>

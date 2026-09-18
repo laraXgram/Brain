@@ -238,6 +238,150 @@ $request->deleteMessage();
 // ...
 ```
 
+Every method takes the parameters the Bot API documents, in the order that reads best, and carries its own documentation — the description of each parameter and the shape of the response — so your editor can complete the call and what comes back.
+
+<a name="responses"></a>
+### Responses
+
+A call gives back a response that may be read three ways, whichever suits the code around it:
+
+```php
+$message = $request->sendMessage($chatId, 'Hello!');
+
+$message['result']['message_id'];  // the array Telegram sent
+$message->message_id;              // the object it describes
+$message->result();                // that object, in full
+```
+
+Reading a field as a property reaches into the result, so `$request->getMe()->first_name` is the bot's name and `$request->getChat($chatId)->title` is the chat's title. Everything around the result is a method, so a field never shadows it:
+
+<div class="content-list" markdown="1">
+
+- `isOk()` and `failed()` — whether Telegram accepted the call.
+- `result()` — the result as the object the method returns (`result(true)` for the raw array).
+- `errorCode()`, `description()` and `parameters()` — the failure, when there is one.
+- `retryAfter()` and `migrateToChatId()` — the extras Telegram attaches to a failure.
+- `toArray()` and `toJson()` — the result; pass `true` for the whole response, envelope included.
+- `throw()` — raise the exception matching a failure, and do nothing otherwise.
+
+</div>
+
+```php
+$response = $request->sendMessage($chatId, 'Hello!');
+
+if ($response->failed()) {
+    logger()->warning($response->description(), ['code' => $response->errorCode()]);
+}
+
+$response->toArray();      // ['message_id' => 42, 'chat' => [...], ...]
+$response->toArray(true);  // ['ok' => true, 'result' => [...]]
+```
+
+The response is also countable, iterable and JSON-serializable, and `json_encode` writes exactly what Telegram sent.
+
+<a name="api-errors"></a>
+### Handling Errors
+
+A call Telegram refuses does not throw by default: it returns the failure, and your code decides what to do with it.
+
+```php
+$response = $request->sendMessage($chatId, 'Hello!');
+
+if ($response->failed()) {
+    logger()->warning($response->description(), ['code' => $response->errorCode()]);
+}
+```
+
+When a failure is exceptional in your application, the `throw` method turns the response into the exception that matches it, so you may catch exactly what you know how to handle. It reads well at the end of a call, too: `$request->sendMessage(...)->throw()`.
+
+```php
+use LaraGram\Laraquest\Exceptions\BotBlockedException;
+use LaraGram\Laraquest\Exceptions\FloodException;
+use LaraGram\Laraquest\Exceptions\TelegramApiException;
+
+try {
+    $request->throw()->sendMessage($chatId, 'Hello!');
+} catch (BotBlockedException) {
+    $user->update(['blocked_at' => now()]);
+} catch (FloodException $e) {
+    ReleaseQueue::dispatch()->delay($e->retryAfter());
+} catch (TelegramApiException $e) {
+    report($e);
+}
+```
+
+To make every call throw, set `throw_exceptions` in your `config/laraquest.php` file (or the `LARAQUEST_THROW_EXCEPTIONS` environment variable), and opt a single call back out with `silent`:
+
+```php
+$response = $request->silent()->getChatMember($chatId, $userId);
+```
+
+Every exception extends `LaraGram\Laraquest\Exceptions\TelegramApiException` and exposes the failure: `method()`, `parameters()`, `errorCode()`, `description()`, `response()`, `retryAfter()`, `migrateToChatId()` and `isRetryable()`.
+
+<div class="overflow-auto">
+
+| Exception | Raised when |
+| --- | --- |
+| `BadRequestException` | Telegram refused the request itself (400) |
+| `ChatNotFoundException` | The chat does not exist, or the bot has never met it |
+| `UserNotFoundException` | The user does not exist, or the bot has never met them |
+| `MessageNotFoundException` | The message to edit, delete, forward, copy, pin or reply to is gone |
+| `MessageNotModifiedException` | An edit would leave the message exactly as it is |
+| `ChatMigratedException` | The group became a supergroup; follow it with `migrateToChatId()` |
+| `InvalidFileException` | The file identifier, URL or type was not accepted |
+| `UnauthorizedException` / `InvalidTokenException` | The bot token was not accepted (401) |
+| `ForbiddenException` | The bot is not allowed to do this (403) |
+| `BotBlockedException` | The user blocked the bot |
+| `BotKickedException` | The bot was removed from the chat, or may not write in it |
+| `UserDeactivatedException` | The account was deleted or deactivated |
+| `NotEnoughRightsException` | The bot lacks the administrator rights the call needs |
+| `NotFoundException` | The method or the resource does not exist (404) |
+| `ConflictException` | A webhook and `getUpdates` are competing (409) |
+| `RequestEntityTooLargeException` | The uploaded file was too large (413) |
+| `FloodException` | The bot is sending too fast (429); wait `retryAfter()` seconds |
+| `InternalServerErrorException` | Telegram failed to handle the call (5xx) |
+| `ConnectionException` | The call never reached Telegram |
+
+</div>
+
+> [!NOTE]
+> [Broadcasts](/v4/broadcasting) and [anti-flood](#smart-anti-flood) keep working the same way whether calls throw or not: a 429 is still retried, a blocked chat is still marked unreachable, and a migrated group is still followed.
+
+<a name="update-objects"></a>
+### Update Objects
+
+Every Bot API type has a class of its own in `LaraGram\Laraquest\Updates`, with one `init` parameter per field. It is the readable way to build the smaller structures a call takes, and the editor lists the fields for you:
+
+```php
+use LaraGram\Laraquest\Updates\LinkPreviewOptions;
+use LaraGram\Laraquest\Updates\ReplyParameters;
+
+$request->sendMessage($chatId, 'Have a look at this',
+    link_preview_options: LinkPreviewOptions::init(url: $url, prefer_large_media: true),
+    reply_parameters: ReplyParameters::init(message_id: $messageId, allow_sending_without_reply: true),
+);
+```
+
+> [!NOTE]
+> Keyboards are the exception: build them with the [keyboard builder](/v4/keyboards) (`Keyboard::inlineKeyboardMarkup(Make::row(...))`), which is shorter, validates the buttons, and handles right-to-left layouts for you.
+
+The same classes read what Telegram sent. `from` accepts an array, a decoded object or a JSON string, and every field that is an object of its own comes back as one:
+
+```php
+use LaraGram\Laraquest\Updates\Message;
+
+$message = Message::from($response['result']);
+
+$message->chat->id;                  // objects all the way down
+$message->entities[0]->type;         // lists of objects too
+$message->get('from.username');      // or a dotted path
+$message->has('photo');
+$message->only(['message_id', 'text'])->toArray();
+count($message);
+```
+
+An update object is countable, iterable, may be read as an array (`$message['text']`), and serializes back to exactly what Telegram expects with `toArray` and `toJson`.
+
 <a name="request-mode"></a>
 ### Request mode
 
@@ -633,6 +777,9 @@ foreach ($chatIds as $chatId) {
     $request->antiFloodWith('broadcast')->sendMessage($chatId, $announcement);
 }
 ```
+
+> [!TIP]
+> To message all of your users or groups, prefer [Telegram broadcasts](/v4/broadcasting#telegram-broadcasts). They use this scope automatically and also queue the work, skip chats that blocked the bot, retry rate limited calls, and track progress.
 
 <a name="anti-flood-eta"></a>
 ### Inspecting the Delay

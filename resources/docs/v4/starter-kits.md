@@ -38,16 +38,16 @@ Once you have started the LaraGram development server, your application will be 
 <a name="react"></a>
 ### React
 
-Our React starter kit provides a robust, modern starting point for building LaraGram applications with a React frontend using [Luna.js](https://laraxgram.github.io/v4/luna).
+Our React starter kit provides a robust, modern starting point for building LaraGram applications with a React frontend using [Luna](/v4/luna).
 
-Luna allows you to build modern, single-page React applications using classic server-side routing and controllers. This lets you enjoy the frontend power of React combined with the incredible backend productivity of LaraGram and lightning-fast Vite compilation.
+Luna lets you build modern, single-page React applications - including [Telegram Mini Apps](/v4/luna-tma) - using classic server-side routing and controllers. This lets you enjoy the frontend power of React combined with the incredible backend productivity of LaraGram and lightning-fast Vite compilation.
 
 The React starter kit utilizes React 19, TypeScript, Tailwind, and the [shadcn/ui](https://ui.shadcn.com) component library.
 
 <a name="svelte"></a>
 ### Svelte
 
-Our Svelte starter kit provides a robust, modern starting point for building LaraGram applications with a Svelte frontend using [Luna.js](https://laraxgram.github.io/v4/luna).
+Our Svelte starter kit provides a robust, modern starting point for building LaraGram applications with a Svelte frontend using [Luna](/v4/luna).
 
 Luna allows you to build modern, single-page Svelte applications using classic server-side routing and controllers. This lets you enjoy the frontend power of Svelte combined with the incredible backend productivity of LaraGram and lightning-fast Vite compilation.
 
@@ -56,7 +56,7 @@ The Svelte starter kit utilizes Svelte 5, TypeScript, Tailwind, and the [shadcn-
 <a name="vue"></a>
 ### Vue
 
-Our Vue starter kit provides a great starting point for building LaraGram applications with a Vue frontend using [Luna.js](https://laraxgram.github.io/v4/luna).
+Our Vue starter kit provides a great starting point for building LaraGram applications with a Vue frontend using [Luna](/v4/luna).
 
 Luna allows you to build modern, single-page Vue applications using classic server-side routing and controllers. This lets you enjoy the frontend power of Vue combined with the incredible backend productivity of LaraGram and lightning-fast Vite compilation.
 

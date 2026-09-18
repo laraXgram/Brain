@@ -57,7 +57,7 @@ In addition, developers are left maintaining two separate code repositories, oft
 <a name="luna"></a>
 ### Luna
 
-Thankfully, LaraGram offers the best of both worlds. [Luna](https://laraxgram.github.io/v4/luna) bridges the gap between your LaraGram application and your modern React, Svelte, or Vue frontend, allowing you to build full-fledged, modern frontends using React, Svelte, or Vue while leveraging LaraGram routes and controllers for routing, data hydration, and authentication — all within a single code repository. With this approach, you can enjoy the full power of both LaraGram and React / Svelte / Vue without crippling the capabilities of either tool.
+Thankfully, LaraGram offers the best of both worlds. [Luna](/v4/luna) bridges the gap between your LaraGram application and your modern React, Svelte, or Vue frontend, allowing you to build full-fledged, modern frontends using React, Svelte, or Vue while leveraging LaraGram routes and controllers for routing, data hydration, and authentication — all within a single code repository. With this approach, you can enjoy the full power of both LaraGram and React / Svelte / Vue without crippling the capabilities of either tool.
 
 After installing Luna into your LaraGram application, you will write routes and controllers like normal. However, instead of returning a Blade template from your controller, you will return an Luna page:
 
@@ -105,7 +105,7 @@ As you can see, Luna allows you to leverage the full power of React, Svelte, or 
 
 #### Server-Side Rendering
 
-If you're concerned about diving into Luna because your application requires server-side rendering, don't worry. Luna offers [server-side rendering support](https://laraxgram.github.io/v4/luna#server-side-rendering). And, when deploying your application via [LaraGram Cloud](https://cloud.LaraGram.com) or [LaraGram Forge](https://forge.LaraGram.com), it's a breeze to ensure that Luna's server-side rendering process is always running.
+If you're concerned about diving into Luna because your application requires server-side rendering, don't worry. Luna offers [server-side rendering support](/v4/luna#server-side-rendering). And, when deploying your application via [LaraGram Cloud](https://cloud.LaraGram.com) or [LaraGram Forge](https://forge.LaraGram.com), it's a breeze to ensure that Luna's server-side rendering process is always running.
 
 <a name="luna-starter-kits"></a>
 ### Starter Kits

@@ -49,6 +49,28 @@ $request->answerCallbackQuery(callback_query()->id, text: 'Saved');
 
 `$request->call('methodName', [...])` calls a method by name. Use `search-docs` with `packages: ['laraxgram/laraquest']` to look up a method's parameters and return type instead of guessing.
 
+## Responses and Errors
+
+A call gives back a response that reads as the array Telegram sent, as the object it describes, or through its own helpers. A refused call does not throw by default; check it when the result matters.
+
+```php
+$response = $request->sendMessage(chat()->id, 'Hello');
+
+$response['result']['message_id'];  // the raw array
+$response->message_id;              // the result's fields, as properties
+$response->result();                // the Message object
+
+if ($response->failed()) {
+    logger()->warning($response->description(), ['code' => $response->errorCode()]);
+}
+```
+
+- Response helpers: `isOk()`, `failed()`, `result(bool $raw = false)`, `errorCode()`, `description()`, `parameters()`, `retryAfter()`, `migrateToChatId()`, `toArray($full = false)`, `toJson($full = false)`, `throw()`. Fields of the result are properties (`getMe()->first_name`), everything around it is a method.
+
+- `$request->throw()->sendMessage(...)` turns a failure into the exception that matches it; `silent()` opts a single call out when `laraquest.throw_exceptions` is on. Catch the specific one you can handle: `BotBlockedException`, `ChatNotFoundException`, `MessageNotModifiedException`, `NotEnoughRightsException`, `FloodException` (`retryAfter()`), `ChatMigratedException` (`migrateToChatId()`), `ConnectionException`, or `TelegramApiException` for the rest (all in `LaraGram\Laraquest\Exceptions`).
+- Never parse `description` strings by hand to detect a blocked user or a migrated group: catch the exception, or read `error_code` and `parameters`.
+- Build payload objects with the generated types instead of nested arrays when it helps: `InlineKeyboardMarkup::init(inline_keyboard: [[InlineKeyboardButton::init(text: 'Open', url: $url)]])`. `Message::from($response['result'])` reads a payload back as objects (`$message->chat->id`, `$message->get('from.username')`).
+
 - Always answer callback queries, even when there is nothing to show.
 - Escape user-provided text for the chosen `parse_mode`, or send it without a parse mode. The helpers `bold()`, `italic()`, `code()`, `inline_url()`, `mention_user_by_id()` and friends build MarkdownV2 fragments.
 - Configure repeated options (such as `parse_mode`) once under `default_parameters` in `config/laraquest.php` instead of passing them on every call.
@@ -70,13 +92,13 @@ Bot connections live in `config/bot.php`. Send through a specific bot with `$req
 
 ## Anti-Flood and Proxies
 
-Telegram limits outgoing calls (about 30 per second overall, 1 message per second per private chat, 20 per minute per group). Enable anti-flood in `config/bot.php` (`ANTI_FLOOD=true`, with a shared store such as `redis` for webhook bots) instead of adding `sleep()` calls. For bulk sends, pace the loop with a named limit and run it in a queued job:
+Telegram limits outgoing calls (about 30 per second overall, 1 message per second per private chat, 20 per minute per group). Enable anti-flood in `config/bot.php` (`ANTI_FLOOD=true`, with a shared store such as `redis` for webhook bots) instead of adding `sleep()` calls. For bulk sends, use the `Broadcast` facade (see [`broadcasting.md`](broadcasting.md)); it queues the work and paces it with the `broadcast` scope:
 
 ```php
-foreach ($chatIds as $chatId) {
-    $request->antiFloodWith('broadcast')->sendMessage($chatId, $announcement);
-}
+Broadcast::users()->sendMessage($announcement)->queue();
 ```
+
+`antiFloodWith('broadcast')` applies the same scope to a single call you make yourself.
 
 `withoutAntiFlood()` skips pacing for a single urgent call. When the server cannot reach Telegram directly, configure the proxy pool (`bot.proxy`) rather than custom HTTP code; `withoutProxy()` and `withProxy('name')` override it per call.
 

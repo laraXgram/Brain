@@ -70,16 +70,23 @@ Commander::command('users:prune-inactive {--days=90}', function (UserPruner $pru
 Use prompt functions for interactive input, and always give non-interactive fallbacks (arguments or options) so the command works in scripts, CI, and for agents running with `--no-interaction`:
 
 ```php
+use LaraGram\Support\Facades\Broadcast;
+
 use function LaraGram\Console\Prompts\confirm;
 use function LaraGram\Console\Prompts\select;
-use function LaraGram\Console\Prompts\spin;
 use function LaraGram\Console\Prompts\text;
 
 $connection = $this->option('connection') ?? select('Which bot?', array_keys(config('bot.connections')));
 $message = text('Announcement text', required: true, validate: ['message' => 'max:4096']);
 
-if (confirm("Send to all users of {$connection}?", default: false)) {
-    spin(fn () => BroadcastAnnouncement::dispatch($connection, $message), 'Queueing...');
+$broadcast = Broadcast::users()->bot($connection)->sendMessage($message);
+
+$recipients = $broadcast->count();
+
+if (confirm("Send to {$recipients} users of {$connection}?", default: false)) {
+    $id = $broadcast->queue();
+
+    $this->info("Queued broadcast {$id}. Follow it with broadcast:status {$id}.");
 }
 ```
 
@@ -103,7 +110,8 @@ Schedule::call(fn () => Order::expired()->delete())->everyFifteenMinutes();
 
 - Production runs `* * * * * cd /path && php laragram schedule:run >> /dev/null 2>&1`; locally use `php laragram schedule:work`. Inspect with `schedule:list`, run one task with `schedule:test`, and add `schedule:interrupt` to deploys when sub-minute tasks exist.
 - Scheduled tasks have no incoming update: `chat()`, `user()`, and `Auth::user()` are null. Pass chat ids explicitly and pick the bot connection (`$request->connection('shop-bot')`).
-- Keep tasks short; dispatch queued jobs for Bot API broadcasts and let anti-flood pace them (`antiFloodWith('broadcast')`).
+- Keep tasks short; send broadcasts with `Broadcast::...->queue()` (delivered by the queue, paced by anti-flood) and always pass `->bot($connection)` in multi-bot applications.
+- Schedule recurring broadcasts with `Schedule::broadcast(fn () => Broadcast::users()->...)` (a closure builds a fresh broadcast on every run), and use `->once('key')` for messages each user must receive only once (onboarding, reminders). One-off future broadcasts use `->later($date)` instead of a schedule entry; both need a queue that supports delays.
 - `withoutOverlapping()` and `onOneServer()` need a shared cache store (Redis or database).
 
 ## Processes
