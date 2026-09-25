@@ -161,7 +161,7 @@ Set a unique `secret_token` for every bot connection in `config/bot.php` and reg
 
 ## Trust Only Telegram-Validated Identities
 
-Authorize bot actions by the update's sender (`user()->id`) or a model resolved from it, never by an id typed into a message or callback data. In a Telegram Mini App, use the ids validated by Luna's `telegram` middleware (`tg_user()->id`) instead of values sent by the client.
+Authorize bot actions by the update's sender (`user()->id`) or a model resolved from it, never by an id typed into a message or callback data. A message sent on behalf of a chat (an anonymous group admin, a linked channel) carries a placeholder `from` user shared by every such message, so never authorize by it: check `sender()`, which returns the sender chat for those messages. In a Telegram Mini App, use the ids validated by Luna's `telegram` middleware (`tg_user()->id`) instead of values sent by the client.
 
 ## Validate Callback Data
 

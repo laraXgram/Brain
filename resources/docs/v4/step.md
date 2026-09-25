@@ -18,7 +18,7 @@ Step::set('awaiting_name');
 ```
 
 > [!NOTE]
-> The active step is stored per user. Internally, the manager derives its cache key from `user()->id`, so each user has their own independent step and sequence state.
+> The active step is stored per sender. Internally, the manager derives its cache key from `sender()->id` (the user, or the chat a message was sent on behalf of), so each sender has their own independent step and sequence state. When the default bot connection is `auto`, the key also includes the [bot connection](/v4/requests#receiving-updates-from-multiple-bots), so a user talking to two of your bots keeps a separate step in each.
 
 <a name="storage-driver"></a>
 ### Storage Driver

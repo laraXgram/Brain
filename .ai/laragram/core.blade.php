@@ -15,7 +15,7 @@ use LaraGram\Brain\Discovery\Enums\Approach;
 ## Bot Development
 
 - IMPORTANT: Activate `bot-development` whenever you write or change listens, bot controllers, keyboards, Temple8 templates, conversations, steps, or bot middleware.
-- Reply through the request's Telegram methods (`$request->sendMessage(chat()->id, 'Hello')`) and read the current update with the `chat()`, `user()`, `message()`, and `callback_query()` helpers.
+- Reply through the request's Telegram methods (`$request->sendMessage(chat()->id, 'Hello')`) and read the current update with the `chat()`, `user()`, `sender()`, `message()`, and `callback_query()` helpers (`user()` is null for channel posts; `sender()` returns the sender chat for messages sent on behalf of a chat).
 - Use Conversations (`{{ $assist->commanderCommand('make:conversation') }}`) or the Step Manager (`Step::set()` + `Bot::onStep()`) for multi-message flows instead of storing ad-hoc state in the cache.
 @if($assist->bot()->usesMultipleBots())
 - This application serves several bot connections ({{ implode(', ', $assist->bot()->connections()) }}; default: `{{ $assist->bot()->defaultConnection() }}`). Bind listen files to connections with `path => connection` pairs in `withListener(bot: [...])` (or `Bot::middleware(...)->forConnections([...])->group(...)`), and pick the connection explicitly for calls made outside an update (jobs, commands).

@@ -22,12 +22,14 @@ Use the global helpers for the common parts of any update. They work across mess
 | Helper | Returns |
 | --- | --- |
 | `chat()` | The chat the update belongs to (`chat()->id`, `chat()->type`) |
-| `user()` | The sender (`user()->id`, `user()->first_name`) |
-| `message()` | The message object, when the update carries one |
+| `user()` | The user who caused the update (`user()->id`, `user()->first_name`); `null` for channel posts and anonymous reactions or votes |
+| `sender()` | The actual sender: a user, or the chat a message was sent on behalf of (`sender_chat`, `actor_chat`, `voter_chat`) |
+| `message()` | The message object, when the update carries one (`null` for callback queries from inline-mode messages) |
 | `callback_query()` | The callback query, when a button was pressed |
-| `text()` | The message text |
+| `text()` | The message text, or the caption of a media message |
+| `bot_connection()` | The bot connection handling the update |
 
-These helpers read the update currently being handled. They return `null` in jobs, commands, and scheduled tasks — pass ids explicitly there.
+These helpers read the update currently being handled. They return `null` in jobs, commands, and scheduled tasks — pass ids explicitly there. Fields Telegram marks optional are `null` when absent, so use `user()?->id` in code that can run for channel posts. A message sent on behalf of a chat in a group (an anonymous admin, a linked channel) carries a placeholder `from` user, so use `sender()` to identify who sent it.
 
 `$request->scope()` returns the chat type (`private`, `group`, `supergroup`, `channel`) and `$request->listenIs('orders.*')` checks the matched listen name.
 
@@ -88,7 +90,7 @@ Store Telegram ids (`user_id`, `chat_id`) on your models when you need to messag
 
 ## Multiple Bots
 
-Bot connections live in `config/bot.php`. Send through a specific bot with `$request->connection('shop-bot')->sendMessage(...)`, or bind a listen group with `Bot::connection('shop-bot')->group(...)`. To receive updates from several bots in one application, give every connection a unique `secret_token` and set `default` to `auto`; LaraGram then selects the connection from each update's secret token.
+Bot connections live in `config/bot.php`. Send through a specific bot with `$request->connection('shop-bot')->sendMessage(...)`, or bind a listen group with `Bot::connection('shop-bot')->group(...)`. To receive updates from several bots in one application, set `default` to `auto` and give every connection a unique `secret_token` (or a unique webhook `url`), then run `webhook:set` for each connection. LaraGram detects each update's connection before any listen is matched and binds it to that update only, so replies, `forConnections()` listens, steps, and conversations all stay with the right bot; read it with `bot_connection()`. Updates no connection can claim are rejected with an `UnresolvableConnectionException`.
 
 ## Anti-Flood and Proxies
 

@@ -67,7 +67,7 @@ Remember that `config:cache` stops `.env` from being read at runtime: only call 
 - Set the production `url` and a unique `secret_token` for each connection in `config/bot.php` (read from `.env`).
 - Run `php laragram webhook:set` (with the user's approval) and confirm with `php laragram webhook:info`.
 - Telegram requires HTTPS on ports 443, 80, 88, or 8443.
-- For several bots in one application, set `bot.default` to `auto` and give each connection its own `secret_token`.
+- For several bots in one application, set `bot.default` to `auto`, give each connection its own `secret_token` (or its own webhook `url`), and run `webhook:set` for every connection.
 - A self-hosted Bot API server is started with `php laragram start:apiserver` (requires `api_id` and `api_hash`), and `bot.api_server.endpoint` must point at it.
 
 ### 5. Shared State
