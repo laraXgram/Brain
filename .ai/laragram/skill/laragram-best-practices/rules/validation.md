@@ -87,3 +87,11 @@ public function after(): array
 ```
 
 Validation against mutable state does not prevent a race between validation and persistence. Enforce inventory, uniqueness, and similar invariants with database constraints, atomic updates, or a database transaction as appropriate.
+
+## Reject Requests Carrying Unvalidated Fields
+
+A request with fields nothing validates is usually a mistake or an attempt at one. Add `#[FailOnUnknownFields]` to a form request to reject it, or call `FormRequest::failOnUnknownFields()` in `AppServiceProvider::boot()` and opt individual requests out with `#[FailOnUnknownFields(false)]`. A field is "known" when a rule names it (wildcards and `_confirmation` suffixes included), so a field you accept on purpose needs a rule such as `['nullable']` rather than turning the check off.
+
+## Validate Bot Input Where It Arrives
+
+Updates are input too. Validate a conversation answer with the question's own rules, and validate a callback's parsed parameters before using them — a `callback_data` string is whatever the client sent, and an old keyboard may carry an id the user may no longer access. Authorize the chat or user, do not infer permission from the fact that the button existed.

@@ -16,6 +16,7 @@ $product->update(['telegram_file_id' => $message['result']['video']['file_id']])
 ```
 
 - Store the `file_id` Telegram returns and reuse it instead of uploading the same file again. A `file_id` is valid only for the bot that received it.
+- To send a resized or converted image, process it with the `Image` component and upload it from memory with `toInputFile()`: `$request->sendPhoto(chat()->id, $request->image()->scale(1280, 1280)->toJpg()->toInputFile())`. Activate `image-manipulation` for the details.
 - Albums: `sendMediaGroup(chat()->id, media: [...])`, where each item is an `InputMedia*` array (`['type' => 'photo', 'media' => $fileId]`). Local files in albums use `attach://name` plus a `CURLFile` parameter with that name.
 - Incoming albums arrive as one update per item sharing a `media_group_id`; `Bot::onAlbum(...)` matches them. Collect the items (for example in the cache keyed by `media_group_id`) before processing the album as a whole.
 - Bot API responses are arrays (`$response['ok']`, `$response['result']`); check `ok` before reading `result`.

@@ -29,6 +29,29 @@ class SyncWithStripe implements ShouldQueue
 
 Rate-limiting and exception-throttling middleware can release jobs back to the queue. Released attempts may still count toward the maximum attempt limit, so configure `$tries` or `retryUntil()` to allow the intended retry window.
 
+## Debounce Bursts Instead of Deduplicating Them
+
+A bot receives bursts: a button tapped five times, a message edited twice, a chat updated by every member. A unique job keeps the *first* dispatch; a debounced job keeps the *last* one, which is what you usually want for syncing and recalculating.
+
+```php
+use LaraGram\Queue\Attributes\DebounceFor;
+
+#[DebounceFor(30, maxWait: 300)]
+class SyncChatMembers implements ShouldQueue
+{
+    use Queueable;
+
+    public function __construct(public int $chatId) {}
+
+    public function debounceId(): string
+    {
+        return (string) $this->chatId;
+    }
+}
+```
+
+Give the job a `debounceId` so the quiet period is per chat or per user rather than global. A debounced job may not also implement `ShouldBeUnique`. Debouncing uses the cache, so a shared store is required when updates are handled in separate processes.
+
 ## Use Unique Jobs for Dispatch Deduplication
 
 Implement `ShouldBeUnique` when only one queued instance of a logical job should exist. Uniqueness uses a cache lock and is not a substitute for idempotent processing or a database constraint.
@@ -100,6 +123,26 @@ Bus::batch([
     ]))
     ->dispatch();
 ```
+
+## Dispatch Many Independent Jobs in Bulk
+
+When the same job is dispatched for many records and you need neither batch tracking nor callbacks, `Bus::bulk($jobs)` groups them by connection and queue and pushes each group in one write. It is dramatically cheaper than a `foreach` of dispatches.
+
+```php
+Bus::bulk($chats->map(fn ($chat) => new SyncChat($chat)));
+```
+
+## Decide Late Whether a Job Should Be Queued at All
+
+A job that must inspect or prepare state before it is pushed may implement `LaraGram\Contracts\Queue\PreparesForDispatch`; returning `false` from `prepareForDispatch()` cancels the dispatch. Use it for the "only one sync in flight" kind of check, instead of querying in the constructor.
+
+## Let Long Jobs React to Shutdown
+
+A worker that receives `SIGTERM` finishes the current job first. A job that imports or exports for minutes should implement `LaraGram\Contracts\Queue\Interruptible` and stop cleanly in `interrupted(int $signal)`, saving its progress, rather than being killed by the orchestrator mid-write.
+
+## Pause a Queue Instead of Killing Workers
+
+During maintenance or a provider outage, `queue:pause <connection>:<queue>` stops workers from picking up new jobs while they finish what they have; `queue:resume` lets them continue. Stopping workers loses the in-flight job's progress and the supervisor usually restarts them anyway.
 
 ## Configure Time-Based Retry Limits Deliberately
 

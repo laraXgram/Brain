@@ -4,7 +4,7 @@
 # LaraGram 4
 
 - CRITICAL: ALWAYS use `search-docs` to find the version-specific documentation needed to implement features.
-- LaraGram 4 requires PHP 8.5 and keeps the LaraGram 3 bot layer largely intact. Its additions are a web layer (routing, HTTP requests and responses, HTTP client, Blade, views, Vite, sessions), Luna frontends and Telegram Mini Apps, MTProto user and bot clients, Conversations, Eloquent API Resources, pagination (including Telegram pagination), and Precognition.
+- LaraGram 4 requires PHP 8.3 (and supports up to 8.5) and keeps the LaraGram 3 bot layer largely intact. Its additions are a web layer (routing, HTTP requests and responses, HTTP client, Blade, views, Vite, sessions), Luna frontends and Telegram Mini Apps, MTProto user and bot clients, Conversations, Eloquent API Resources, pagination (including Telegram pagination), and Precognition.
 
 ## Application Structure
 

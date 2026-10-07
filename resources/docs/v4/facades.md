@@ -218,6 +218,7 @@ Below you will find every facade and its underlying class. This is a useful tool
 | File                  | [LaraGram\Filesystem\Filesystem](https://api.laragram.com/LaraGram/Filesystem/Filesystem.html)                       | `files`                   |
 | Gate                  | [LaraGram\Contracts\Auth\Access\Gate](https://api.laragram.com/LaraGram/Contracts/Auth/Access/Gate.html)             | &nbsp;                    |
 | Hash                  | [LaraGram\Contracts\Hashing\Hasher](https://api.laragram.com/LaraGram/Contracts/Hashing/Hasher.html)                 | `hash`                    |
+| Image                 | [LaraGram\Image\ImageManager](https://api.laragram.com/LaraGram/Image/ImageManager.html)                             | `image`                   |
 | Lang                  | [LaraGram\Translation\Translator](https://api.laragram.com/LaraGram/Translation/Translator.html)                     | `translator`              |
 | Log                   | [LaraGram\Log\LogManager](https://api.laragram.com/LaraGram/Log/LogManager.html)                                     | `log`                     |
 | Pipeline (Instance)   | [LaraGram\Pipeline\Pipeline](https://api.laragram.com/LaraGram/Pipeline/Pipeline.html)                               | &nbsp;                    |

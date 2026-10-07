@@ -67,7 +67,7 @@ if ($response->failed()) {
 }
 ```
 
-- Response helpers: `isOk()`, `failed()`, `result(bool $raw = false)`, `errorCode()`, `description()`, `parameters()`, `retryAfter()`, `migrateToChatId()`, `toArray($full = false)`, `toJson($full = false)`, `throw()`. Fields of the result are properties (`getMe()->first_name`), everything around it is a method.
+- Response helpers: `isOk()`, `failed()`, `result(bool $raw = false)`, `errorCode()`, `description()`, `parameters()`, `retryAfter()`, `migrateToChatId()`, `toArray($full = false)`, `toJson($full = false)`, `throw()`, and the aliases `error_code()`, `retry_after()`, `migrate_to_chat_id()`. Fields of the result are properties (`getMe()->first_name`), everything around it is a method.
 
 - `$request->throw()->sendMessage(...)` turns a failure into the exception that matches it; `silent()` opts a single call out when `laraquest.throw_exceptions` is on. Catch the specific one you can handle: `BotBlockedException`, `ChatNotFoundException`, `MessageNotModifiedException`, `NotEnoughRightsException`, `FloodException` (`retryAfter()`), `ChatMigratedException` (`migrateToChatId()`), `ConnectionException`, or `TelegramApiException` for the rest (all in `LaraGram\Laraquest\Exceptions`).
 - Never parse `description` strings by hand to detect a blocked user or a migrated group: catch the exception, or read `error_code` and `parameters`.
@@ -114,7 +114,7 @@ Bot::onPhoto(function (Request $request) {
 });
 ```
 
-`$request->file()` returns a `FileBag` (albums, sizes, `downloadAll()`), and each `MediaFile` exposes `fileId()`, `fileSize()`, `fileName()`, `isPhoto()`, `largest()`, and `download($path, $disk)`. Validate file size and type before downloading, and reuse `fileId()` to resend a file instead of uploading it again.
+`$request->file()` returns a `FileBag` (albums, sizes, `downloadAll()`), and each `MediaFile` exposes `fileId()`, `fileSize()`, `fileName()`, `isPhoto()`, `largest()`, and `download($path, $disk)`. Validate file size and type before downloading, and reuse `fileId()` to resend a file instead of uploading it again. To resize or convert an incoming photo, use `$request->image()` (largest photo size or an image document, `null` otherwise) or `$media->image()`; both download lazily and return a `LaraGram\Image\Image` (see the `image-manipulation` skill).
 
 ## Webhooks
 

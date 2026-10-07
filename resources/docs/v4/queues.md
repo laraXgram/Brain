@@ -97,9 +97,68 @@ The following dependencies are needed for the listed queue drivers. These depend
 <div class="content-list" markdown="1">
 
 - Redis: `predis/predis ~2.0` or phpredis PHP extension
+- Amazon SQS: `aws/aws-sdk-php`
+- Beanstalkd: `pda/pheanstalk ~5.0`
 - [MongoDB](https://www.mongodb.com/docs/drivers/php/laragram-mongodb/current/queues/): `laraxgram/laragram-mongodb`
 
 </div>
+
+<a name="sqs-fifo-queues"></a>
+#### SQS FIFO Queues
+
+A queue whose name ends in `.fifo` is a FIFO queue, and SQS then requires a message group id. By default the queue name is used, which keeps every job of that queue in one strict order. To let independent work run in parallel while keeping order per chat or per user, give the job a message group:
+
+```php
+class SyncChatMembers implements ShouldQueue
+{
+    use Queueable;
+
+    public function __construct(public int $chatId)
+    {
+    }
+
+    /**
+     * Get the message group the job belongs to.
+     */
+    public function messageGroup(): string
+    {
+        return 'chat-'.$this->chatId;
+    }
+}
+```
+
+SQS also deduplicates messages in a FIFO queue. LaraGram sends a deduplication id derived from the payload, so a job that is dispatched twice with the same data is only delivered once. A job may decide for itself:
+
+```php
+/**
+ * Get the deduplication ID for the job.
+ */
+public function deduplicationId(string $payload, string $queue): string
+{
+    return hash('xxh128', $payload);
+}
+```
+
+Return an empty string to let content-based deduplication, configured in AWS, handle it instead.
+
+<a name="queue-failover"></a>
+#### Queue Failover
+
+The `failover` driver tries several connections in order, so a queue that is unreachable does not take your bot down with it. List the connections it should walk through, with the last one as the local fallback:
+
+```php
+'connections' => [
+    'failover' => [
+        'driver' => 'failover',
+        'connections' => [
+            'redis',
+            'database',
+        ],
+    ],
+],
+```
+
+Pushing to the `failover` connection pushes to the first connection that accepts the job.
 
 <a name="creating-jobs"></a>
 ## Creating Jobs
@@ -317,6 +376,65 @@ class UpdateSearchIndex implements ShouldQueue, ShouldBeUnique
 
 > [!NOTE]
 > If you only need to limit the concurrent processing of a job, use the [WithoutOverlapping](/v4/queues#preventing-job-overlaps) job middleware instead.
+
+<a name="debounced-jobs"></a>
+### Debounced Jobs
+
+Bots dispatch the same job again and again: a user taps a button five times, edits a message twice, or a chat is updated by every member in a burst. A **debounced** job waits for a quiet period, and every dispatch within that period takes its place, so only the last one runs. Add the `DebounceFor` attribute, and give the job a debounce id so the window is per user, per chat, or per record:
+
+```php
+<?php
+
+namespace App\Jobs;
+
+use LaraGram\Contracts\Queue\ShouldQueue;
+use LaraGram\Foundation\Queue\Queueable;
+use LaraGram\Queue\Attributes\DebounceFor;
+
+#[DebounceFor(30)]
+class SyncChatMembers implements ShouldQueue
+{
+    use Queueable;
+
+    /**
+     * Create a new job instance.
+     */
+    public function __construct(public int $chatId)
+    {
+    }
+
+    /**
+     * Get the debounce ID for the job.
+     */
+    public function debounceId(): string
+    {
+        return (string) $this->chatId;
+    }
+}
+```
+
+Dispatching `SyncChatMembers` for the same chat several times within 30 seconds leaves one job behind, delayed by the quiet period, and the earlier ones are dropped by the worker when it reaches them.
+
+To cap how long a job that keeps being re-dispatched may be deferred, pass `maxWait`. Once that many seconds have passed since the first dispatch, the next dispatch runs without further delay:
+
+```php
+#[DebounceFor(30, maxWait: 300)]
+class SyncChatMembers implements ShouldQueue
+{
+    // ...
+}
+```
+
+The quiet period may also be declared as a property, which is handy when it comes from configuration:
+
+```php
+public $debounceFor = 30;
+```
+
+[Queued event listeners](/v4/events#queued-event-listeners) may be debounced in the same way, with the same attribute.
+
+> [!WARNING]
+> A debounced job may not also be a [unique job](#unique-jobs): the two make opposite promises, and dispatching such a job throws a `LogicException`. Debouncing uses the cache, so configure a shared cache store, and remember that an update handled in a separate process still sees the same lock.
 
 <a name="encrypted-jobs"></a>
 ### Encrypted Jobs
@@ -715,6 +833,40 @@ public function middleware(): array
 > [!NOTE]
 > If you are using Redis, you may use the `LaraGram\Queue\Middleware\ThrottlesExceptionsWithRedis` middleware, which is fine-tuned for Redis and more efficient than the basic exception throttling middleware.
 
+<a name="releasing-jobs"></a>
+### Releasing Jobs
+
+The `Release` middleware puts a job back on the queue without running it. `Release::when` releases the job when the condition is true, and `Release::unless` when it is false:
+
+```php
+use LaraGram\Queue\Middleware\Release;
+
+/**
+ * Get the middleware the job should pass through.
+ */
+public function middleware(): array
+{
+    return [
+        Release::when($condition, releaseAfter: 60),
+    ];
+}
+```
+
+A closure may be used for anything the job itself has to decide — waiting for a payment, a file that is still uploading, or a Telegram flood wait to pass:
+
+```php
+use LaraGram\Queue\Middleware\Release;
+
+public function middleware(): array
+{
+    return [
+        Release::when(fn (): bool => ! $this->order->isPaid(), releaseAfter: 60),
+    ];
+}
+```
+
+Releasing a job still counts as an attempt, so tune the job's `Tries` and `MaxExceptions` attributes accordingly.
+
 <a name="skipping-jobs"></a>
 ### Skipping Jobs
 
@@ -883,6 +1035,56 @@ class PodcastController extends Controller
         ProcessPodcast::dispatchSync($podcast);
 
         return to_listen('podcasts');
+    }
+}
+```
+
+<a name="bulk-dispatching"></a>
+### Bulk Dispatching
+
+When many independent jobs are dispatched at once — one per recipient of a report, one per chat to re-check — and you need neither [batch](#job-batching) tracking nor callbacks, the `Bus` facade's `bulk` method pushes them in groups, one write per connection and queue:
+
+```php
+use App\Jobs\SyncChat;
+use LaraGram\Support\Facades\Bus;
+
+Bus::bulk(
+    $chats->map(fn ($chat) => new SyncChat($chat))
+);
+```
+
+> [!NOTE]
+> To message many chats, reach for [broadcasting](/v4/broadcasting) instead: it paces the calls, retries the rate limited ones and tracks progress, which a pile of jobs does not.
+
+<a name="preparing-jobs-before-dispatch"></a>
+### Preparing Jobs Before Dispatch
+
+A job that must prepare or check its state before it is queued may implement the `LaraGram\Contracts\Queue\PreparesForDispatch` interface. Its `prepareForDispatch` method runs before the job is pushed, and returning `false` cancels the dispatch:
+
+```php
+<?php
+
+namespace App\Jobs;
+
+use LaraGram\Contracts\Queue\PreparesForDispatch;
+use LaraGram\Contracts\Queue\ShouldQueue;
+use LaraGram\Foundation\Queue\Queueable;
+use LaraGram\Support\Facades\Cache;
+
+class SyncChatMembers implements PreparesForDispatch, ShouldQueue
+{
+    use Queueable;
+
+    public function __construct(public int $chatId)
+    {
+    }
+
+    /**
+     * Prepare the job for dispatching.
+     */
+    public function prepareForDispatch(): bool
+    {
+        return Cache::add('syncing:'.$this->chatId, true, 300);
     }
 }
 ```
@@ -1280,7 +1482,7 @@ class ProcessPodcast implements ShouldQueue
 }
 ```
 
-Sometimes, IO blocking processes such as sockets or outgoing HTTP connections may not respect your specified timeout. Therefore, when using these features, you should always attempt to specify a timeout using their APIs as well. For example, when using Guzzle, you should always specify a connection and request timeout value.
+Sometimes, IO blocking processes such as sockets or outgoing HTTP connections may not respect your specified timeout. Therefore, when using these features, you should always attempt to specify a timeout using their APIs as well. For example, when using the [HTTP client](/v4/http-client), you should always specify a connection and request timeout value.
 
 > [!WARNING]
 > The [PCNTL](https://www.php.net/manual/en/book.pcntl.php) PHP extension must be installed in order to specify job timeouts. In addition, a job's "timeout" value should always be less than its ["retry after"](#job-expiration) value. Otherwise, the job may be re-attempted before it has actually finished executing or timed out.
@@ -1915,6 +2117,76 @@ This command will instruct all queue workers to gracefully exit after they finis
 > [!NOTE]
 > The queue uses the [cache](/v4/cache) to store restart signals, so you should verify that a cache driver is properly configured for your application before using this feature.
 
+<a name="reacting-to-worker-signals"></a>
+### Reacting to Worker Signals
+
+When a worker receives a termination signal such as `SIGQUIT`, `SIGTERM` or `SIGINT` while a job is running, it finishes that job before exiting. A long job may want to react to the signal itself — stop reading new rows, save its progress, tell the user it will continue later.
+
+Implement the `LaraGram\Contracts\Queue\Interruptible` interface and define an `interrupted` method; the signal number is passed to it:
+
+```php
+<?php
+
+namespace App\Jobs;
+
+use App\Models\Import;
+use LaraGram\Contracts\Queue\Interruptible;
+use LaraGram\Contracts\Queue\ShouldQueue;
+use LaraGram\Foundation\Queue\Queueable;
+
+class ImportContacts implements Interruptible, ShouldQueue
+{
+    use Queueable;
+
+    protected bool $shouldStop = false;
+
+    public function __construct(public Import $import)
+    {
+    }
+
+    /**
+     * Execute the job.
+     */
+    public function handle(): void
+    {
+        foreach ($this->import->pendingRows() as $row) {
+            if ($this->shouldStop) {
+                break;
+            }
+
+            // Import the row...
+        }
+
+        $this->import->save();
+    }
+
+    /**
+     * Handle a termination signal received by the worker.
+     */
+    public function interrupted(int $signal): void
+    {
+        $this->shouldStop = true;
+    }
+}
+```
+
+<a name="pausing-and-resuming-queue-workers"></a>
+### Pausing and Resuming Queue Workers
+
+A queue may be paused without stopping its workers, which is what you want during maintenance or while a Telegram outage passes. Pass the connection and the queue name:
+
+```shell
+php laragram queue:pause database:default
+```
+
+Workers finish the job they are running and then stop picking up new ones until the queue is resumed:
+
+```shell
+php laragram queue:resume database:default
+```
+
+The `queue:continue` command is an alias of `queue:resume`.
+
 <a name="job-expirations-and-timeouts"></a>
 ### Job Expirations and Timeouts
 
@@ -2177,6 +2449,56 @@ By default, all the failed job records that are more than 24 hours old will be p
 
 ```shell
 php laragram queue:prune-failed --hours=48
+```
+
+<a name="failed-job-storage-drivers"></a>
+### Failed Job Storage Drivers
+
+Failed jobs are stored by the driver named under `failed` in your `config/queue.php` file. The default is `database-uuids`, which writes to the `failed_jobs` table and gives every failure a UUID:
+
+<div class="overflow-auto">
+
+| Driver | Stores failures in |
+| --- | --- |
+| `database-uuids` | The `failed_jobs` table, keyed by UUID (the default) |
+| `database` | The `failed_jobs` table, keyed by an auto-incrementing id |
+| `file` | A JSON file under `storage/framework/cache`, keeping the last `limit` failures |
+| `dynamodb` | An Amazon DynamoDB table |
+| `null` | Nowhere; failures are discarded |
+
+</div>
+
+The `file` driver needs no database at all, which suits a small bot on a single server:
+
+```php
+'failed' => [
+    'driver' => 'file',
+    'path' => storage_path('framework/cache/failed-jobs.json'),
+    'limit' => 100,
+],
+```
+
+<a name="storing-failed-jobs-in-dynamodb"></a>
+#### Storing Failed Jobs in DynamoDB
+
+Failures may also be stored in [DynamoDB](https://aws.amazon.com/dynamodb). Create the table yourself — named after the `table` option — with a string partition key named `application` and a string sort key named `uuid`. The `application` part holds your application's `name`, so one table may serve several applications.
+
+Install the AWS SDK:
+
+```shell
+composer require aws/aws-sdk-php
+```
+
+Then configure the driver with the credentials to authenticate with. The `database` option is not used by this driver:
+
+```php
+'failed' => [
+    'driver' => env('QUEUE_FAILED_DRIVER', 'dynamodb'),
+    'key' => env('AWS_ACCESS_KEY_ID'),
+    'secret' => env('AWS_SECRET_ACCESS_KEY'),
+    'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+    'table' => 'failed_jobs',
+],
 ```
 
 <a name="disabling-failed-job-storage"></a>

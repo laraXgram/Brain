@@ -375,7 +375,7 @@ $versions = $request->array('versions');
 <a name="retrieving-date-input-values"></a>
 #### Retrieving Date Input Values
 
-For convenience, input values containing dates / times may be retrieved as Carbon instances using the `date` method. If the request does not contain an input value with the given name, `null` will be returned:
+For convenience, input values containing dates / times may be retrieved as [Tempora](/v4/tempora) instances using the `date` method. If the request does not contain an input value with the given name, `null` will be returned:
 
 ```php
 $birthday = $request->date('birthday');
@@ -392,16 +392,16 @@ If the input value is present but has an invalid format, an `InvalidArgumentExce
 <a name="retrieving-interval-input-values"></a>
 #### Retrieving Interval Input Values
 
-Input values containing durations may be retrieved as `CarbonInterval` instances using the `interval` method. If the request does not contain an input value with the given name, `null` will be returned:
+Input values containing durations may be retrieved as `TemporaInterval` instances using the `interval` method. If the request does not contain an input value with the given name, `null` will be returned:
 
 ```php
 $duration = $request->interval('duration');
 ```
 
-If the input value is numeric, you may provide a unit as the second argument. The unit may be a string such as `second`, `minute`, or `day`, or a `Carbon\Unit` enum instance:
+If the input value is numeric, you may provide a unit as the second argument. The unit may be a string such as `second`, `minute`, or `day`, or a `LaraGram\Tempora\Unit` enum instance:
 
 ```php
-use Carbon\Unit;
+use LaraGram\Tempora\Unit;
 
 $timeout = $request->interval('timeout', 'second');
 
@@ -734,7 +734,7 @@ $extension = $request->photo->extension();
 <a name="other-file-methods"></a>
 #### Other File Methods
 
-There are a variety of other methods available on `UploadedFile` instances. Check out the [API documentation for the class](https://github.com/symfony/symfony/blob/6.0/src/Symfony/Component/HttpFoundation/File/UploadedFile.php) for more information regarding these methods.
+There are a variety of other methods available on `UploadedFile` instances. See the `LaraGram\Http\UploadedFile` class for more information regarding these methods.
 
 <a name="storing-uploaded-files"></a>
 ### Storing Uploaded Files
@@ -792,7 +792,7 @@ In addition to configuring the trusted proxies, you may also configure the proxy
 ```
 
 > [!NOTE]
-> If you are using AWS Elastic Load Balancing, the `headers` value should be `Request::HEADER_X_FORWARDED_AWS_ELB`. If your load balancer uses the standard `Forwarded` header from [RFC 7239](https://www.rfc-editor.org/rfc/rfc7239#section-4), the `headers` value should be `Request::HEADER_FORWARDED`. For more information on the constants that may be used in the `headers` value, check out Symfony's documentation on [trusting proxies](https://symfony.com/doc/current/deployment/proxies.html).
+> If you are using AWS Elastic Load Balancing, the `headers` value should be `Request::HEADER_X_FORWARDED_AWS_ELB`. If your load balancer uses the standard `Forwarded` header from [RFC 7239](https://www.rfc-editor.org/rfc/rfc7239#section-4), the `headers` value should be `Request::HEADER_FORWARDED`. The constants that may be used in the `headers` value are defined on the `LaraGram\Http\Request` class.
 
 <a name="trusting-all-proxies"></a>
 #### Trusting All Proxies

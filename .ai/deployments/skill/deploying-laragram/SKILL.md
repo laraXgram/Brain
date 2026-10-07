@@ -29,7 +29,7 @@ Use `search-docs` for the exact options (`deployment`, `surge`, `queues`, `sched
 
 ### 1. Server Requirements
 
-PHP 8.5 with the ctype, cURL, fileinfo, filter, hash, mbstring, OpenSSL, PCRE, PDO, tokenizer, and intl extensions. Surge additionally needs the Swoole or OpenSwoole extension. The web server user must be able to write `storage/` and `bootstrap/cache/`.
+PHP 8.3 or newer (8.3 to 8.5 are supported) with the ctype, cURL, fileinfo, filter, hash, mbstring, OpenSSL, PCRE, PDO, tokenizer, and intl extensions. Surge additionally needs the Swoole or OpenSwoole extension. The web server user must be able to write `storage/` and `bootstrap/cache/`.
 
 ### 2. Web Server
 
@@ -41,7 +41,7 @@ location / {
 }
 
 location ~ ^/index\.php(/|$) {
-    fastcgi_pass unix:/var/run/php/php8.5-fpm.sock;
+    fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
     fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
     include fastcgi_params;
 }

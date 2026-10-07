@@ -7,7 +7,7 @@ To help you learn more about what's happening within your application, LaraGram 
 
 LaraGram logging is based on "channels". Each channel represents a specific way of writing log information. For example, the `single` channel writes log files to a single log file, while the `slack` channel sends log messages to Slack. Log messages may be written to multiple channels based on their severity.
 
-Under the hood, LaraGram utilizes the custom rewritten [Monolog](https://github.com/Seldaek/monolog) library, which provides support for a variety of powerful log handlers. LaraGram makes it a cinch to configure these handlers, allowing you to mix and match them to customize your application's log handling.
+Under the hood, LaraGram ships its own logging engine in the `LaraGram\Log` component, which provides support for a variety of powerful log handlers. LaraGram makes it a cinch to configure these handlers, allowing you to mix and match them to customize your application's log handling.
 
 <a name="configuration"></a>
 ## Configuration
@@ -230,7 +230,7 @@ use Closure;
 use LaraGram\Request\Request;
 use LaraGram\Support\Facades\Log;
 use LaraGram\Support\Str;
-use Symfony\Request\Response;
+use LaraGram\Http\Response;
 
 class AssignRequestId
 {
@@ -388,17 +388,17 @@ class CustomizeFormatter
 <a name="creating-laragram-handler-channels"></a>
 ### Creating LaraGram Handler Channels
 
-rewritten Monolog has a variety of [available handlers](https://github.com/Seldaek/monolog/tree/main/src/Monolog/Handler) and LaraGram does not include a built-in channel for each one. In some cases, you may wish to create a custom channel that is merely an instance of a specific LaraGram handler that does not have a corresponding LaraGram log driver.  These channels can be easily created using the `laragram` driver.
+LaraGram ships a variety of handlers in the `LaraGram\Log\Logger\Handler` namespace — `StreamHandler`, `RotatingFileHandler`, `SyslogHandler`, `ErrorLogHandler`, `SlackWebhookHandler`, `TelegramBotHandler`, `GroupHandler`, `WhatFailureGroupHandler`, `FingersCrossedHandler`, and `NullHandler` — and does not include a built-in channel for each one. In some cases, you may wish to create a custom channel that is merely an instance of a specific LaraGram handler that does not have a corresponding LaraGram log driver.  These channels can be easily created using the `laragram` driver.
 
 When using the `laragram` driver, the `handler` configuration option is used to specify which handler will be instantiated. Optionally, any constructor parameters the handler needs may be specified using the `handler_with` configuration option:
 
 ```php
-'logentries' => [
+'alerts' => [
     'driver'  => 'laragram',
-    'handler' => LaraGram\Log\Logger\Handler\SyslogUdpHandler::class,
+    'handler' => LaraGram\Log\Logger\Handler\TelegramBotHandler::class,
     'handler_with' => [
-        'host' => 'my.logentries.internal.datahubhost.company.com',
-        'port' => '10000',
+        'apiKey' => env('LOG_TELEGRAM_BOT_TOKEN'),
+        'channel' => env('LOG_TELEGRAM_CHAT_ID'),
     ],
 ],
 ```
@@ -409,10 +409,13 @@ When using the `laragram` driver, the `handler` configuration option is used to 
 When using the `laragram` driver, the LaraGram `LineFormatter` will be used as the default formatter. However, you may customize the type of formatter passed to the handler using the `formatter` and `formatter_with` configuration options:
 
 ```php
-'browser' => [
+'rotating' => [
     'driver' => 'laragram',
-    'handler' => LaraGram\Log\Logger\Handler\BrowserConsoleHandler::class,
-    'formatter' => LaraGram\Log\Logger\Formatter\HtmlFormatter::class,
+    'handler' => LaraGram\Log\Logger\Handler\RotatingFileHandler::class,
+    'handler_with' => [
+        'filename' => storage_path('logs/laragram.log'),
+    ],
+    'formatter' => LaraGram\Log\Logger\Formatter\JsonFormatter::class,
     'formatter_with' => [
         'dateFormat' => 'Y-m-d',
     ],
@@ -422,9 +425,12 @@ When using the `laragram` driver, the LaraGram `LineFormatter` will be used as t
 If you are using a LaraGram handler that is capable of providing its own formatter, you may set the value of the `formatter` configuration option to `default`:
 
 ```php
-'newrelic' => [
+'slack' => [
     'driver' => 'laragram',
-    'handler' => LaraGram\Log\Logger\Handler\NewRelicHandler::class,
+    'handler' => LaraGram\Log\Logger\Handler\SlackWebhookHandler::class,
+    'handler_with' => [
+        'webhookUrl' => env('LOG_SLACK_WEBHOOK_URL'),
+    ],
     'formatter' => 'default',
 ],
 ```
@@ -432,7 +438,7 @@ If you are using a LaraGram handler that is capable of providing its own formatt
 <a name="laragram-processors"></a>
 #### LaraGram Processors
 
-LaraGram can also process messages before logging them. You can create your own processors or use the [existing processors offered by Monolog](https://github.com/Seldaek/monolog/tree/main/src/Monolog/Processor).
+LaraGram can also process messages before logging them, adding to or rewriting each record. You may write your own processors — any class with an `__invoke` method that receives and returns a log record — or use the ones that ship in the `LaraGram\Log\Logger\Processor` namespace.
 
 If you would like to customize the processors for a `laragram` driver, add a `processors` configuration value to your channel's configuration:
 
@@ -445,7 +451,7 @@ If you would like to customize the processors for a `laragram` driver, add a `pr
     ],
     'processors' => [
         // Simple syntax...
-        LaraGram\Log\Logger\Processor\MemoryUsageProcessor::class,
+        App\Logging\AddChatContext::class,
 
         // With options...
         [
@@ -459,7 +465,7 @@ If you would like to customize the processors for a `laragram` driver, add a `pr
 <a name="creating-custom-channels-via-factories"></a>
 ### Creating Custom Channels via Factories
 
-If you would like to define an entirely custom channel in which you have full control over LaraGram's instantiation and configuration, you may specify a `custom` driver type in your `config/logging.php` configuration file. Your configuration should include a `via` option that contains the name of the factory class which will be invoked to create the rewritten Monolog instance:
+If you would like to define an entirely custom channel in which you have full control over LaraGram's instantiation and configuration, you may specify a `custom` driver type in your `config/logging.php` configuration file. Your configuration should include a `via` option that contains the name of the factory class which will be invoked to create the logger instance:
 
 ```php
 'channels' => [

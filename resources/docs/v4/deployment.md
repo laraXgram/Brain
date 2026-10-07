@@ -12,7 +12,7 @@ The LaraGram framework has a few system requirements. You should ensure that you
 
 <div class="content-list" markdown="1">
 
-- PHP >=` 8.5`
+- PHP >=` 8.3`
 - Ctype PHP Extension
 - cURL PHP Extension
 - Fileinfo PHP Extension

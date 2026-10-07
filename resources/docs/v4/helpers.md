@@ -2605,7 +2605,7 @@ throw_unless(
 <a name="method-today"></a>
 #### `today()` {.collection-method}
 
-The `today` function creates a new `LaraGram\Support\Carbon` instance for the current date:
+The `today` function creates a new `LaraGram\Support\Tempora` instance for the current date:
 
 ```php
 $today = today();
@@ -2760,7 +2760,7 @@ Sometimes, you may want to benchmark the execution of a callback while still obt
 <a name="dates"></a>
 ### Dates
 
-LaraGram includes [Tempora](https://github.com/laraxgram/tempora), a rewritten version of [Carbon](https://carbon.nesbot.com/docs/), a powerful date and time manipulation library. To create a new `Carbon` instance, you may invoke the `now` function. This function is globally available within your LaraGram application:
+LaraGram includes [Tempora](https://github.com/laraxgram/tempora), a rewritten version of [Carbon](https://carbon.nesbot.com/docs/), a powerful date and time manipulation library. To create a new `Tempora` instance, you may invoke the `now` function. This function is globally available within your LaraGram application:
 
 ```php
 $now = now();
@@ -2774,7 +2774,7 @@ use LaraGram\Support\Tempora;
 $now = Tempora::now();
 ```
 
-For a thorough discussion of Carbon and its features, please consult the [official Carbon documentation](https://carbon.nesbot.com/docs/).
+For a thorough discussion of the available methods, see the [Tempora documentation](/v4/tempora) and the [Carbon documentation](https://carbon.nesbot.com/docs/) it is based on.
 
 <a name="deferred-functions"></a>
 ### Deferred Functions
@@ -2832,12 +2832,12 @@ Lottery::odds(1, 20)
 You may combine LaraGram's lottery class with other LaraGram features. For example, you may wish to only report a small percentage of slow queries to your exception handler. And, since the lottery class is callable, we may pass an instance of the class into any method that accepts callables:
 
 ```php
-use Carbon\CarbonInterval;
+use LaraGram\Tempora\TemporaInterval;
 use LaraGram\Support\Facades\DB;
 use LaraGram\Support\Lottery;
 
 DB::whenQueryingForLongerThan(
-    CarbonInterval::seconds(2),
+    TemporaInterval::seconds(2),
     Lottery::odds(1, 100)->winner(fn () => report('Querying > 2 seconds.')),
 );
 ```

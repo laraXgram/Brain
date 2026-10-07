@@ -3,7 +3,7 @@
 <a name="introduction"></a>
 ## Introduction
 
-LaraGram provides a powerful filesystem abstraction thanks to the wonderful [Flysystem](https://github.com/thephpleague/flysystem) PHP package by Frank de Jonge. The LaraGram Flysystem integration provides simple drivers for working with local filesystems. Even better, it's amazingly simple to switch between these storage options between your local development machine and production server as the API remains the same for each system.
+LaraGram provides a powerful filesystem abstraction with drivers for working with local filesystems, FTP, SFTP, and Amazon S3 compatible services. Even better, it's amazingly simple to switch between these storage options between your local development machine and production server as the API remains the same for each system.
 
 <a name="configuration"></a>
 ## Configuration
@@ -52,6 +52,119 @@ The `storage:unlink` command may be used to destroy your configured symbolic lin
 
 ```shell
 php laragram storage:unlink
+```
+
+<a name="driver-prerequisites"></a>
+### Driver Prerequisites
+
+The `local`, `ftp` and `scoped` drivers work out of the box. Two drivers talk to an outside service through its own SDK, which must be installed before they may be used:
+
+```shell
+# Amazon S3 and S3 compatible services
+composer require aws/aws-sdk-php
+
+# SFTP
+composer require league/flysystem-sftp-v3
+```
+
+<a name="s3-driver-configuration"></a>
+#### S3 Driver Configuration
+
+The S3 driver's configuration lives in your `config/filesystems.php` file, and is usually driven by environment variables:
+
+```ini
+AWS_ACCESS_KEY_ID=your-key
+AWS_SECRET_ACCESS_KEY=your-secret
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=your-bucket
+AWS_USE_PATH_STYLE_ENDPOINT=false
+```
+
+<a name="s3-compatible-filesystems"></a>
+#### Amazon S3 Compatible Filesystems
+
+The same driver talks to any S3 compatible service — MinIO, Cloudflare R2, DigitalOcean Spaces, Backblaze B2 — by setting the `endpoint` option alongside the usual credentials:
+
+```ini
+AWS_ENDPOINT=https://minio:9000
+AWS_USE_PATH_STYLE_ENDPOINT=true
+```
+
+> [!NOTE]
+> Services that do not support per-object visibility, such as Cloudflare R2, are detected and their visibility calls are skipped, so `url` and `temporaryUrl` keep working.
+
+<a name="ftp-driver-configuration"></a>
+#### FTP Driver Configuration
+
+The FTP driver is built in, but has no entry in the default configuration file. Add one when you need it:
+
+```php
+'ftp' => [
+    'driver' => 'ftp',
+    'host' => env('FTP_HOST'),
+    'username' => env('FTP_USERNAME'),
+    'password' => env('FTP_PASSWORD'),
+
+    // Optional FTP Settings...
+    // 'port' => env('FTP_PORT', 21),
+    // 'root' => env('FTP_ROOT'),
+    // 'passive' => true,
+    // 'ssl' => true,
+    // 'timeout' => 30,
+],
+```
+
+<a name="sftp-driver-configuration"></a>
+#### SFTP Driver Configuration
+
+```php
+'sftp' => [
+    'driver' => 'sftp',
+    'host' => env('SFTP_HOST'),
+
+    // Settings for basic authentication...
+    'username' => env('SFTP_USERNAME'),
+    'password' => env('SFTP_PASSWORD'),
+
+    // Settings for SSH key based authentication with encryption password...
+    'privateKey' => env('SFTP_PRIVATE_KEY'),
+    'passphrase' => env('SFTP_PASSPHRASE'),
+
+    // Settings for file / directory permissions...
+    'visibility' => 'private', // `private` = 0600, `public` = 0644
+    'directory_visibility' => 'private', // `private` = 0700, `public` = 0755
+
+    // Optional SFTP Settings...
+    // 'hostFingerprint' => env('SFTP_HOST_FINGERPRINT'),
+    // 'maxTries' => 4,
+    // 'port' => env('SFTP_PORT', 22),
+    // 'root' => env('SFTP_ROOT'),
+    // 'timeout' => 30,
+    // 'useAgent' => true,
+],
+```
+
+<a name="scoped-and-read-only-filesystems"></a>
+### Scoped and Read-Only Filesystems
+
+A **scoped** disk is another disk with a path prefix, so every operation is confined to that subdirectory. It is a convenient way to give a feature its own corner of a bucket without repeating the prefix:
+
+```php
+'invoices' => [
+    'driver' => 'scoped',
+    'disk' => 's3',
+    'prefix' => 'invoices',
+],
+```
+
+Any disk may also be made **read-only**, so the code that uses it cannot write by accident:
+
+```php
+'archive' => [
+    'driver' => 'local',
+    'root' => storage_path('app/archive'),
+    'read-only' => true,
+],
 ```
 
 <a name="obtaining-disk-instances"></a>
@@ -141,10 +254,124 @@ The MIME type of a given file may be obtained via the `mimeType` method:
 $mime = Storage::mimeType('file.jpg');
 ```
 
+<a name="downloading-files"></a>
+### Downloading Files
+
+The `download` method generates a response that forces the user's browser to download the file at the given path. It accepts a file name as its second argument, which determines the file name the user downloading the file will see, and an array of HTTP headers as its third argument:
+
+```php
+return Storage::download('file.jpg');
+
+return Storage::download('file.jpg', $name, $headers);
+```
+
+<a name="file-urls"></a>
+### File URLs
+
+The `url` method gets the URL of a file. For the `local` driver this prepends `/storage` to the path and returns a relative URL; for the `s3` driver the fully qualified remote URL is returned:
+
+```php
+use LaraGram\Support\Facades\Storage;
+
+$url = Storage::url('file.jpg');
+```
+
+When using the `local` driver, files that should be publicly accessible must be placed in `storage/app/public` and reached through the symbolic link created by [`storage:link`](#the-public-disk).
+
+> [!WARNING]
+> Remember, the `url` method does not URL encode the path. For that reason, store file names that always produce valid URLs.
+
+<a name="url-host-customization"></a>
+#### URL Host Customization
+
+To change the host of URLs generated by a disk, add or change the `url` option in the disk's configuration:
+
+```php
+'public' => [
+    'driver' => 'local',
+    'root' => storage_path('app/public'),
+    'url' => env('APP_URL').'/storage',
+    'visibility' => 'public',
+    'serve' => true,
+    'throw' => false,
+],
+```
+
+<a name="temporary-urls"></a>
+### Temporary URLs
+
+The `temporaryUrl` method creates a URL that expires, which is the right way to hand out a private file:
+
+```php
+use LaraGram\Support\Facades\Storage;
+
+$url = Storage::temporaryUrl(
+    'file.jpg', now()->addMinutes(5)
+);
+```
+
+The `local` driver supports temporary URLs as long as the disk has `'serve' => true`, which the default `public` disk already has. Other drivers hand the request to the service they talk to; the S3 driver, for example, accepts additional request parameters:
+
+```php
+$url = Storage::temporaryUrl(
+    'file.jpg',
+    now()->addMinutes(5),
+    [
+        'ResponseContentType' => 'application/octet-stream',
+        'ResponseContentDisposition' => 'attachment; filename=file2.jpg',
+    ]
+);
+```
+
+If you need to generate temporary URLs for a driver that does not support them, or build them in a way of your own, register a `buildTemporaryUrlsUsing` callback from the `boot` method of a [service provider](/v4/providers):
+
+```php
+use DateTimeInterface;
+use LaraGram\Support\Facades\Storage;
+use LaraGram\Support\Facades\URL;
+
+public function boot(): void
+{
+    Storage::disk('local')->buildTemporaryUrlsUsing(
+        function (string $path, DateTimeInterface $expiration, array $options) {
+            return URL::temporarySignedRoute(
+                'files.download',
+                $expiration,
+                array_merge($options, ['path' => $path])
+            );
+        }
+    );
+}
+```
+
+<a name="automatic-streaming"></a>
+### Automatic Streaming
+
+Streaming a file to the browser reduces memory usage significantly. The `serve` method builds that response for you, choosing the right content type and headers from the file itself:
+
+```php
+use LaraGram\Http\Request;
+use LaraGram\Support\Facades\Storage;
+
+Route::get('/file/{path}', function (Request $request, string $path) {
+    return Storage::disk('local')->serve($request, $path);
+})->where('path', '.*');
+```
+
+A disk may also decide how it serves files, which is useful when every file needs a header of its own:
+
+```php
+Storage::disk('local')->serveUsing(function (Request $request, string $path) {
+    return Storage::disk('local')->response($path, headers: [
+        'Cache-Control' => 'max-age=3600',
+    ]);
+});
+```
+
 <a name="storing-files"></a>
 ## Storing Files
 
-The `put` method may be used to store file contents on a disk. You may also pass a PHP `resource` to the `put` method, which will use Flysystem's underlying stream support. Remember, all file paths should be specified relative to the "root" location configured for the disk:
+The `put` method may be used to store file contents on a disk. You may also pass a PHP `resource` to the `put` method, which will use the underlying stream support. Remember, all file paths should be specified relative to the "root" location configured for the disk:
 
 ```php
 use LaraGram\Support\Facades\Storage;
@@ -187,10 +414,85 @@ Storage::copy('old/file.jpg', 'new/file.jpg');
 Storage::move('old/file.jpg', 'new/file.jpg');
 ```
 
+<a name="file-uploads"></a>
+### File Uploads
+
+On the web side of your application, a file that was uploaded through a form is stored with the `store` method, which generates a unique id for the file name:
+
+```php
+use LaraGram\Http\Request;
+
+Route::post('/avatar', function (Request $request) {
+    $path = $request->file('avatar')->store('avatars');
+
+    return $path;
+});
+```
+
+The `storeAs` method names the file yourself, and both methods accept the disk as their last argument:
+
+```php
+$path = $request->file('avatar')->storeAs('avatars', $user->id);
+
+$path = $request->file('avatar')->store('avatars', 's3');
+```
+
+The same may be done from the `Storage` facade with `putFile` and `putFileAs`, which accept an uploaded file or a `LaraGram\Http\File` instance:
+
+```php
+use LaraGram\Http\File;
+use LaraGram\Support\Facades\Storage;
+
+// Automatically generate a unique ID for the file name...
+$path = Storage::putFile('photos', new File('/path/to/photo'));
+
+// Manually specify a file name...
+$path = Storage::putFileAs('photos', new File('/path/to/photo'), 'photo.jpg');
+```
+
+<a name="storing-telegram-files"></a>
+#### Storing Files Sent to Your Bot
+
+Files that arrive from Telegram are not HTTP uploads: they are referenced by a `file_id`, and LaraGram downloads them for you. Every [media file](/v4/requests#working-with-media-files) of an update may be written straight to a disk:
+
+```php
+use LaraGram\Request\Request;
+use LaraGram\Support\Facades\Bot;
+
+Bot::onPhoto(function (Request $request) {
+    // The last file of a photo bag is its largest size...
+    $request->file()->last()->download('avatars/'.user()->id.'.jpg', 'public');
+});
+```
+
+Inside a [conversation](/v4/conversations), an answer that holds media downloads the same way:
+
+```php
+$answers->get('avatar')->download('avatars/'.user()->id.'.jpg', 'public');
+```
+
+> [!NOTE]
+> Telegram's Bot API only serves files up to 20 MB. For anything larger, download it over [MTProto](/v4/mtproto-media) instead.
+
+<a name="image-manipulation"></a>
+### Image Manipulation
+
+Images may be resized, cropped and converted before they are stored, using LaraGram's [image manipulation](/v4/images) component:
+
+```php
+use LaraGram\Support\Facades\Image;
+
+$path = Image::fromUpload($request->file('photo'))
+    ->scale(width: 512)
+    ->toWebp()
+    ->quality(80)
+    ->store(path: 'thumbnails', disk: 'public');
+```
+
 <a name="file-visibility"></a>
 ### File Visibility
 
-In LaraGram's Flysystem integration, "visibility" is an abstraction of file permissions across multiple platforms. Files may either be declared `public` or `private`. When a file is declared `public`, you are indicating that the file should generally be accessible to others.
+In LaraGram, "visibility" is an abstraction of file permissions across multiple platforms. Files may either be declared `public` or `private`. When a file is declared `public`, you are indicating that the file should generally be accessible to others.
 
 You can set the visibility when writing the file via the `put` method:
 
@@ -284,4 +586,38 @@ Finally, the `deleteDirectory` method may be used to remove a directory and all 
 
 ```php
 Storage::deleteDirectory($directory);
+```
+
+<a name="custom-filesystems"></a>
+## Custom Filesystems
+
+A driver of your own is registered with the `Storage` facade's `extend` method, from the `boot` method of a [service provider](/v4/providers). The callback receives the application and the disk's configuration, and returns a `LaraGram\Filesystem\FilesystemAdapter` instance wrapping your adapter:
+
+```php
+use LaraGram\Contracts\Foundation\Application;
+use LaraGram\Filesystem\FilesystemAdapter;
+use LaraGram\Filesystem\Flysystem;
+use LaraGram\Support\Facades\Storage;
+
+public function boot(): void
+{
+    Storage::extend('dropbox', function (Application $app, array $config) {
+        $adapter = new DropboxAdapter(/* ... */);
+
+        return new FilesystemAdapter(
+            new Flysystem($adapter, $config),
+            $adapter,
+            $config
+        );
+    });
+}
+```
+
+The disk then uses the driver by name:
+
+```php
+'dropbox' => [
+    'driver' => 'dropbox',
+    // ...
+],
 ```

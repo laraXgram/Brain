@@ -12,12 +12,12 @@
 > the new work is in brand-new components (MTProto, Luna, the web layer). Bumping the dependency plus
 > the steps below is usually all that is required.
 
-<a name="php-8.5-required"></a>
-### PHP 8.5 Required
+<a name="php-8.3-required"></a>
+### PHP 8.3 Required
 
 **Likelihood Of Impact: High**
 
-LaraGram 4 requires PHP 8.5. Update your environment before upgrading.
+LaraGram 4 requires PHP 8.3 (previously 8.2), and supports PHP 8.3 through 8.5. Update your environment before upgrading.
 
 <a name="updating-dependencies"></a>
 ### Updating Dependencies

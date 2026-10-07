@@ -27,7 +27,7 @@ If you are using [LaraGram Armada](/armada) as your local development environmen
 <a name="probe"></a>
 ### Probe (REPL)
 
-[LaraGram Probe](https://github.com/laraxgram/probe) is a powerful REPL for the LaraGram framework. It ships with its own interactive shell — no external REPL is installed alongside it — and boots your whole application in the terminal, so you can talk to your bot, your models and your services line by line.
+[LaraGram Probe](https://github.com/laraxgram/probe) is a powerful REPL for the LaraGram framework. It boots your whole application in the terminal, so you can talk to your bot, your models and your services line by line.
 
 <a name="installation"></a>
 #### Installation
@@ -84,7 +84,7 @@ php laragram vendor:publish --provider="LaraGram\Probe\ProbeServiceProvider"
 > The `dispatch` helper function and the `dispatch` method of the `Dispatchable` trait rely on garbage collection to place the job on the queue. When working in Probe, dispatch jobs with `Bus::dispatch` or `Queue::push` instead.
 
 > [!NOTE]
-> Probe runs against your real configuration, so a call such as `sendMessage` reaches Telegram for real. Use a development bot connection, or `Request::mode(Mode::NO_RESPONSE_CURL)`, while experimenting.
+> Probe runs against your real configuration, so a call such as `sendMessage` reaches Telegram for real. Use a development bot connection, while experimenting.
 
 <a name="command-allow-list"></a>
 #### Command Allow List

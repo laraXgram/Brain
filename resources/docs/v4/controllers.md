@@ -17,13 +17,6 @@ To quickly generate a new controller, you may run the `make:controller` Commande
 php laragram make:controller UserController
 ```
 
-Controllers for web routes live in `app/Http/Controllers` and receive `LaraGram\Http\Request`. Pass the `--web` option to generate one; the web-only options `--resource`, `--api`, `--singleton`, `--model`, `--parent` and `--requests` imply `--web`:
-
-```shell
-php laragram make:controller PhotoController --web
-php laragram make:controller PhotoController --resource --model=Photo
-```
-
 Let's take a look at an example of a basic controller. A controller may have any number of public methods which will respond to incoming Bot requests:
 
 ```php
@@ -153,6 +146,330 @@ public static function middleware(): array
         },
     ];
 }
+```
+
+<a name="middleware-attributes"></a>
+### Middleware Attributes
+
+Middleware may also be attached with the `Middleware` attribute, on the class or on a single method. The attribute is repeatable, and accepts the same `only` / `except` options:
+
+```php
+<?php
+
+namespace App\Controllers;
+
+use LaraGram\Routing\Attributes\Controllers\Middleware;
+
+#[Middleware('auth')]
+class UserController extends Controller
+{
+    #[Middleware('subscribed')]
+    public function index(): mixed
+    {
+        // ...
+    }
+
+    #[Middleware('log', except: ['destroy'])]
+    public function store(): mixed
+    {
+        // ...
+    }
+}
+```
+
+<a name="authorization-attributes"></a>
+### Authorization Attributes
+
+The `Authorize` attribute is a shortcut for the `can` middleware: it runs an [authorization](/v4/authorization) check before the action, and may name the models whose route parameters are passed to the policy:
+
+```php
+use App\Models\Post;
+use LaraGram\Routing\Attributes\Controllers\Authorize;
+
+#[Authorize('viewAny', Post::class)]
+class PostController extends Controller
+{
+    #[Authorize('update', 'post')]
+    public function update(Post $post): mixed
+    {
+        // ...
+    }
+}
+```
+
+<a name="resource-controllers"></a>
+## Resource Controllers
+
+When a controller serves [web routes](/v4/routing) for an Eloquent model, it usually needs the same set of actions for every model: creating, reading, updating and deleting records. A resource controller declares those actions, and a single route declaration registers all of their routes.
+
+Generate one with the `--resource` option:
+
+```shell
+php laragram make:controller PhotoController --resource
+```
+
+The generated controller has a method for each available resource operation. The `--model` option type-hints the model in every method, `--parent` generates a nested resource controller, and `--singleton` generates a [singleton resource controller](#singleton-resource-controllers):
+
+```shell
+php laragram make:controller PhotoController --model=Photo --resource
+
+php laragram make:controller CommentController --parent=Photo --resource
+
+php laragram make:controller ProfileController --singleton
+``` Next, register the resource route:
+
+```php
+use App\Controllers\PhotoController;
+use LaraGram\Support\Facades\Route;
+
+Route::resource('photos', PhotoController::class);
+```
+
+This single declaration creates the routes of every action the controller handles:
+
+<div class="overflow-auto">
+
+| Verb      | URI                    | Action  | Route Name     |
+| --------- | ---------------------- | ------- | -------------- |
+| GET       | `/photos`              | index   | photos.index   |
+| GET       | `/photos/create`       | create  | photos.create  |
+| POST      | `/photos`              | store   | photos.store   |
+| GET       | `/photos/{photo}`      | show    | photos.show    |
+| GET       | `/photos/{photo}/edit` | edit    | photos.edit    |
+| PUT/PATCH | `/photos/{photo}`      | update  | photos.update  |
+| DELETE    | `/photos/{photo}`      | destroy | photos.destroy |
+
+</div>
+
+Several resources may be registered at once by passing an array to the `resources` method:
+
+```php
+Route::resources([
+    'photos' => PhotoController::class,
+    'posts' => PostController::class,
+]);
+```
+
+<a name="missing-model-behavior"></a>
+#### Customizing Missing Model Behavior
+
+When an implicitly bound model is not found, a 404 response is returned. The `missing` method defines what happens instead:
+
+```php
+use LaraGram\Http\Request;
+use LaraGram\Support\Facades\Redirect;
+
+Route::resource('photos', PhotoController::class)
+    ->missing(fn (Request $request) => Redirect::route('photos.index'));
+```
+
+<a name="soft-deleted-models"></a>
+#### Soft Deleted Models
+
+Implicit [model binding](/v4/routing#implicit-binding) skips soft deleted models. `withTrashed` lets a resource resolve them, for every action or for the ones you name:
+
+```php
+Route::resource('photos', PhotoController::class)->withTrashed();
+
+Route::resource('photos', PhotoController::class)->withTrashed(['show']);
+```
+
+<a name="api-resource-routes"></a>
+#### API Resource Routes
+
+An API has no HTML forms, so the `create` and `edit` routes are pointless. Use `apiResource` to leave them out:
+
+```php
+Route::apiResource('photos', PhotoController::class);
+
+Route::apiResources([
+    'photos' => PhotoController::class,
+    'posts' => PostController::class,
+]);
+```
+
+Generate a controller without those methods with the `--api` option:
+
+```shell
+php laragram make:controller PhotoController --api
+```
+
+<a name="partial-resource-routes"></a>
+### Partial Resource Routes
+
+A resource may register only a part of its actions:
+
+```php
+Route::resource('photos', PhotoController::class)->only([
+    'index', 'show',
+]);
+
+Route::resource('photos', PhotoController::class)->except([
+    'create', 'store', 'update', 'destroy',
+]);
+```
+
+<a name="nested-resources"></a>
+### Nested Resources
+
+A resource that belongs to another one is nested with "dot" notation, which produces URIs such as `/photos/{photo}/comments/{comment}`:
+
+```php
+Route::resource('photos.comments', PhotoCommentController::class);
+```
+
+<a name="shallow-nesting"></a>
+#### Shallow Nesting
+
+The parent identifier is only needed where it adds something: listing and creating. The `shallow` method keeps the parent for those actions and drops it from the rest:
+
+```php
+Route::resource('photos.comments', CommentController::class)->shallow();
+```
+
+<a name="naming-resource-routes"></a>
+### Naming Resource Routes
+
+Every resource action gets a route name, and any of them may be overridden:
+
+```php
+Route::resource('photos', PhotoController::class)->names([
+    'create' => 'photos.build',
+]);
+
+Route::resource('photos', PhotoController::class)->name('create', 'photos.build');
+```
+
+<a name="naming-resource-route-parameters"></a>
+### Naming Resource Route Parameters
+
+Resource routes name their parameters after the singularized resource name. The `parameters` method changes that per resource, and `parameter` renames a single one:
+
+```php
+Route::resource('users', AdminUserController::class)->parameters([
+    'users' => 'admin_user',
+]);
+
+Route::resource('users', AdminUserController::class)->parameter('user', 'admin_user');
+```
+
+The example above produces `/users/{admin_user}` for the resource's `show` route.
+
+<a name="scoping-resource-routes"></a>
+### Scoping Resource Routes
+
+LaraGram's [scoped implicit model binding](/v4/routing#implicit-model-binding-scoping) can make sure a nested model belongs to its parent. The `scoped` method enables it, and names the field each nested parameter resolves by:
+
+```php
+Route::resource('photos.comments', PhotoCommentController::class)->scoped([
+    'comment' => 'slug',
+]);
+```
+
+That resource resolves `/photos/{photo}/comments/{comment:slug}` through the photo's `comments` relationship.
+
+<a name="localizing-resource-uris"></a>
+### Localizing Resource URIs
+
+By default, resource routes use English verbs in their URIs (`create` and `edit`). Those verbs may be translated with the `ResourceRegistrar::verbs` method, which is best called from the `boot` method of your `App\Providers\AppServiceProvider`:
+
+```php
+use LaraGram\Routing\ResourceRegistrar;
+
+public function boot(): void
+{
+    ResourceRegistrar::verbs([
+        'create' => 'crear',
+        'edit' => 'editar',
+    ]);
+}
+```
+
+LaraGram's pluralizer supports [several languages](/v4/localization), so the resource name is pluralized accordingly: `Route::resource('publicacion', PublicacionController::class)` then produces URIs such as `/publicacion/crear`.
+
+<a name="supplementing-resource-controllers"></a>
+### Supplementing Resource Controllers
+
+A resource controller may of course have routes of its own. Register them **before** the resource, or the resource's `show` route will match first:
+
+```php
+Route::get('/photos/popular', [PhotoController::class, 'popular']);
+
+Route::resource('photos', PhotoController::class);
+```
+
+> [!NOTE]
+> Keep your controllers focused. A controller that needs methods outside the typical resource actions is usually two controllers.
+
+<a name="singleton-resource-controllers"></a>
+### Singleton Resource Controllers
+
+Some resources only ever have one instance — a user's profile, the settings of an application, the thumbnail of an image. Such a resource has no `index` route and takes no identifier:
+
+```php
+use App\Controllers\ProfileController;
+
+Route::singleton('profile', ProfileController::class);
+```
+
+<div class="overflow-auto">
+
+| Verb      | URI             | Action | Route Name     |
+| --------- | --------------- | ------ | -------------- |
+| GET       | `/profile`      | show   | profile.show   |
+| GET       | `/profile/edit` | edit   | profile.edit   |
+| PUT/PATCH | `/profile`      | update | profile.update |
+
+</div>
+
+A singleton may also be nested inside a standard resource:
+
+```php
+Route::singleton('photos.thumbnail', ThumbnailController::class);
+```
+
+When a singleton resource may be created or destroyed, add `creatable` or `destroyable`:
+
+```php
+Route::singleton('photos.thumbnail', ThumbnailController::class)->creatable();
+
+Route::singleton('photos.thumbnail', ThumbnailController::class)->destroyable();
+```
+
+`apiSingleton` registers a singleton for an API, leaving out the `create` and `edit` routes:
+
+```php
+Route::apiSingleton('profile', ProfileController::class);
+
+Route::apiSingleton('photos.thumbnail', ProfileController::class)->creatable();
+```
+
+<a name="middleware-and-resource-controllers"></a>
+### Middleware and Resource Controllers
+
+Middleware may be assigned to every action of a resource, or to the actions you name:
+
+```php
+Route::resource('photos', PhotoController::class)
+    ->middleware(['auth', 'verified']);
+
+Route::resource('photos', PhotoController::class)
+    ->middlewareFor('show', 'auth')
+    ->middlewareFor(['create', 'store', 'update'], 'auth');
+
+Route::singleton('profile', ProfileController::class)
+    ->middlewareFor('show', 'auth');
+```
+
+`withoutMiddleware` and `withoutMiddlewareFor` remove middleware a group applied:
+
+```php
+Route::middleware(['auth', 'verified', 'subscribed'])->group(function () {
+    Route::resource('photos', PhotoController::class)
+        ->withoutMiddlewareFor('index', ['auth', 'verified'])
+        ->withoutMiddlewareFor(['create', 'store'], 'verified')
+        ->withoutMiddleware(['subscribed']);
+});
 ```
 
 <a name="dependency-injection-and-controllers"></a>

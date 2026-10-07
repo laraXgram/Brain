@@ -300,6 +300,7 @@ Reading a field as a property reaches into the result, so `$request->getMe()->fi
 - `retryAfter()` and `migrateToChatId()` — the extras Telegram attaches to a failure.
 - `toArray()` and `toJson()` — the result; pass `true` for the whole response, envelope included.
 - `throw()` — raise the exception matching a failure, and do nothing otherwise.
+- `error_code()`, `retry_after()` and `migrate_to_chat_id()` — the same three values under the names Telegram uses, if you prefer them.
 
 </div>
 
@@ -605,6 +606,14 @@ If you only need the absolute Telegram download URL (or local server path), you 
 
 ```php
 $url = $file->url();
+```
+
+To resize, convert, or otherwise process an image file before storing or sending it, you may call the `image` method, which returns a lazily downloaded `LaraGram\Image\Image` instance. The `image` method of the request returns the largest size of the current update's photo, or an image document. For more information, consult the [image manipulation documentation](/v4/images):
+
+```php
+$path = $request->image()?->cover(400, 400)->toWebp()->store('avatars');
+
+$image = $file->image();
 ```
 
 #### Retrieving File Metadata

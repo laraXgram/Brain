@@ -88,6 +88,51 @@ php laragram event:list
 
 To give your application a speed boost, you should cache a manifest of all of your application's listeners using the `optimize` or `event:cache` Commander commands. Typically, this command should be run as part of your application's [deployment process](/v4/deployment#optimization). This manifest will be used by the framework to speed up the event registration process. The `event:clear` command may be used to destroy the event cache.
 
+<a name="dynamic-event-discovery"></a>
+#### Dynamic Event Discovery
+
+By default, listeners are discovered in your application's `app/Listeners` directory. Other directories may be scanned instead, or in addition, by passing them to the `withEvents` method in your application's `bootstrap/app.php` file:
+
+```php
+->withEvents(discover: [
+    __DIR__.'/../app/Domain/Orders/Listeners',
+])
+```
+
+Discovery may also be turned off entirely, which is useful when every listener is registered by hand:
+
+```php
+->withEvents(discover: false)
+```
+
+A single listener may opt out of discovery by implementing the `LaraGram\Contracts\Events\ShouldBeDiscovered` interface and returning `false` from its `shouldBeDiscovered` method. This is useful for a listener that is only registered under some condition, such as a feature flag:
+
+```php
+<?php
+
+namespace App\Listeners;
+
+use LaraGram\Contracts\Events\ShouldBeDiscovered;
+
+class SendWelcomeMessage implements ShouldBeDiscovered
+{
+    public static function shouldBeDiscovered(): bool
+    {
+        return config('features.welcome_message');
+    }
+
+    // ...
+}
+```
+
+The result is baked into the cached manifest, so run `event:cache` again after the condition changes.
+
+In production, scanning the filesystem on every request is wasteful. Cache the discovered listeners with the `event:cache` Commander command as part of your deployment, and clear them with `event:clear`:
+
+```shell
+php laragram event:cache
+```
+
 <a name="manually-registering-events"></a>
 ### Manually Registering Events
 
@@ -380,6 +425,162 @@ class RewardGiftCard implements ShouldQueue
 }
 ```
 
+<a name="queued-listener-middleware"></a>
+### Queued Listener Middleware
+
+Queued listeners may use [job middleware](/v4/queues#job-middleware), which wraps logic around the listener instead of repeating it inside every listener. Return them from a `middleware` method:
+
+```php
+<?php
+
+namespace App\Listeners;
+
+use App\Events\OrderShipped;
+use LaraGram\Contracts\Queue\ShouldQueue;
+use LaraGram\Queue\Middleware\RateLimited;
+
+class SendShipmentNotification implements ShouldQueue
+{
+    /**
+     * Handle the event.
+     */
+    public function handle(OrderShipped $event): void
+    {
+        // ...
+    }
+
+    /**
+     * Get the middleware the listener should pass through.
+     */
+    public function middleware(OrderShipped $event): array
+    {
+        return [new RateLimited('notifications')];
+    }
+}
+```
+
+<a name="encrypted-queued-listeners"></a>
+#### Encrypted Queued Listeners
+
+A queued listener's payload travels through the queue in plain text. When it carries something sensitive, implement the `ShouldBeEncrypted` interface and LaraGram [encrypts](/v4/encryption) the payload before pushing it:
+
+```php
+use LaraGram\Contracts\Queue\ShouldBeEncrypted;
+use LaraGram\Contracts\Queue\ShouldQueue;
+
+class SendPaymentReceipt implements ShouldBeEncrypted, ShouldQueue
+{
+    // ...
+}
+```
+
+<a name="unique-event-listeners"></a>
+### Unique Event Listeners
+
+Sometimes an event is dispatched more often than its listener needs to run — a chat updated by every member of a burst, a model saved in a loop. A listener that implements `ShouldBeUnique` has only one instance on the queue at a time:
+
+```php
+use LaraGram\Contracts\Queue\ShouldBeUnique;
+use LaraGram\Contracts\Queue\ShouldQueue;
+
+class SyncChatMembers implements ShouldBeUnique, ShouldQueue
+{
+    // ...
+}
+```
+
+<a name="keeping-listeners-unique-until-processing-begins"></a>
+#### Keeping Listeners Unique Until Processing Begins
+
+By default a listener stays unique until it has finished. To release the lock as soon as it starts — so a new event dispatched while it runs is not lost — implement `ShouldBeUniqueUntilProcessing` instead:
+
+```php
+use LaraGram\Contracts\Queue\ShouldBeUniqueUntilProcessing;
+use LaraGram\Contracts\Queue\ShouldQueue;
+
+class SyncChatMembers implements ShouldBeUniqueUntilProcessing, ShouldQueue
+{
+    // ...
+}
+```
+
+<a name="unique-listener-locks"></a>
+#### Unique Listener Locks
+
+The lock is keyed by the listener class. To make it per chat or per user instead, define a `uniqueId` property or method, and `uniqueFor` to say how long the lock may be held:
+
+```php
+class SyncChatMembers implements ShouldBeUnique, ShouldQueue
+{
+    /**
+     * The number of seconds after which the listener's unique lock is released.
+     */
+    public $uniqueFor = 3600;
+
+    /**
+     * Get the unique ID for the listener.
+     */
+    public function uniqueId(ChatUpdated $event): string
+    {
+        return (string) $event->chat->id;
+    }
+}
+```
+
+<a name="debounced-event-listeners"></a>
+### Debounced Event Listeners
+
+A [debounced](/v4/queues#debounced-jobs) listener waits for a quiet period, and every event dispatched within it takes the listener's place, so only the last one is handled. It is the right answer to the bursts a bot sees — a user tapping a button repeatedly, a message edited several times in a row:
+
+```php
+use LaraGram\Contracts\Queue\ShouldQueue;
+use LaraGram\Queue\Attributes\DebounceFor;
+
+#[DebounceFor(30, maxWait: 120)]
+class SyncChatMembers implements ShouldQueue
+{
+    public function handle(ChatUpdated $event): void
+    {
+        // ...
+    }
+
+    /**
+     * Get the debounce ID for the listener.
+     */
+    public function debounceId(ChatUpdated $event): string
+    {
+        return (string) $event->chat->id;
+    }
+}
+```
+
+> [!WARNING]
+> A debounced listener may not also implement `ShouldBeUnique`; dispatching an event to such a listener throws a `LogicException`.
+
+<a name="specifying-queued-listener-max-exceptions"></a>
+### Specifying Listener Attempts, Exceptions and Timeouts
+
+How often a queued listener is retried, how many exceptions it may throw, and how long it may run are declared with the same [attributes](/v4/queues#specifying-max-job-attempts-timeout-values) jobs use:
+
+```php
+use LaraGram\Contracts\Queue\ShouldQueue;
+use LaraGram\Queue\Attributes\FailOnTimeout;
+use LaraGram\Queue\Attributes\MaxExceptions;
+use LaraGram\Queue\Attributes\Timeout;
+use LaraGram\Queue\Attributes\Tries;
+
+#[Tries(3)]
+#[MaxExceptions(2)]
+#[Timeout(120)]
+#[FailOnTimeout]
+class SendShipmentNotification implements ShouldQueue
+{
+    // ...
+}
+```
+
+`Backoff`, `Delay`, `Queue`, `Connection` and `DeleteWhenMissingModels` work on listeners as well, and a `backoff`, `tries` or `retryUntil` method on the listener wins over the attribute.
+
 <a name="manually-interacting-with-the-queue"></a>
 ### Manually Interacting With the Queue
 
@@ -626,6 +827,34 @@ class OrderShipped implements ShouldDispatchAfterCommit
         public Order $order,
     ) {}
 }
+```
+
+<a name="deferring-events"></a>
+### Deferring Events
+
+Deferred events hold the dispatching of events — and the execution of their listeners — until a block of code has finished. It is what you want when the listeners need the whole picture: every related record created, every message sent.
+
+Pass a closure to the `Event::defer` method:
+
+```php
+use App\Models\User;
+use LaraGram\Support\Facades\Event;
+
+Event::defer(function () {
+    $user = User::create(['user_id' => user()->id, 'first_name' => 'Amir']);
+
+    $user->chats()->create(['chat_id' => chat()->id]);
+});
+```
+
+Every event raised inside the closure is dispatched once the closure returns, so a listener sees the user *and* the chat. If the closure throws, the deferred events are never dispatched.
+
+To defer only some events, pass them as the second argument:
+
+```php
+Event::defer(function () {
+    // ...
+}, ['eloquent.created: '.User::class]);
 ```
 
 <a name="event-subscribers"></a>

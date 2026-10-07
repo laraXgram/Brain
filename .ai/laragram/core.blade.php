@@ -90,6 +90,10 @@ These were detected in the existing code; follow them unless the user asks other
 - Activate `commander-development` when creating or changing console commands, closure commands in `listens/console.php`, prompts, scheduled tasks, or shell processes.
 - Scheduled tasks, jobs, and commands have no incoming update: `chat()`, `user()`, and `Auth::user()` are `null` there, so pass chat ids and the bot connection explicitly.
 
+## Images
+
+- Activate `image-manipulation` when resizing, cropping, converting, inspecting, or storing images (Telegram photos, web uploads, storage files), or when sending a processed image to Telegram.
+
 ## Vite Error
 
 - If you receive a "Unable to locate file in Vite manifest" error, you can run `{{ $assist->nodePackageManagerCommand('run build') }}` or ask the user to run `{{ $assist->nodePackageManagerCommand('run dev') }}` or `{{ $assist->composerCommand('run dev') }}`.

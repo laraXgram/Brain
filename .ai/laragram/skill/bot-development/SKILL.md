@@ -20,7 +20,8 @@ Check `listens/bot.php`, existing controllers in `app/Controllers`, templates in
 2. Map the change to the rule index below and read each mapped rule file before editing.
 3. Keep listen patterns specific and ordered deliberately: the first matching listen handles the update unless listens are marked as overlapping.
 4. Verify without touching Telegram: `bot_listens` lists the registered listens, `bot_simulate_update` runs a fake update through them and returns the matched listen plus every Bot API call the handlers made, `bot_render_template` shows what a template would send, and `bot_conversation_state` inspects (or resets) the conversation a user is in. Brain exposes all four when `laraxgram/mcp` is installed, and nothing they do reaches Telegram. Then check `last-error` / `read-log-entries`.
-5. Never call `webhook:set`, `webhook:delete`, or send broadcasts to real chats unless the user asks.
+5. When an update already failed in a real chat and the logs are not enough, read it back from [Sentinel](../../../sentinel/core.blade.php) if `laraxgram/sentinel` is installed: `php laragram sentinel:check` and the dashboard keep the update, the matched listen, every Bot API call and the exception. Activate the `sentinel-debugging` skill before using it, and never replay or clear anything unless the user asks.
+6. Never call `webhook:set`, `webhook:delete`, or send broadcasts to real chats unless the user asks.
 
 ## Rule Index
 

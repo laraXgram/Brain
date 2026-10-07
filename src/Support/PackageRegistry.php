@@ -25,6 +25,12 @@ class PackageRegistry
 
     public const MCP = 'laraxgram/mcp';
 
+    public const AI = 'laraxgram/ai';
+
+    public const SENTINEL = 'laraxgram/sentinel';
+
+    public const PROBE = 'laraxgram/probe';
+
     public const LUNA_LARAGRAM = 'laraxgram/luna';
 
     public const LUNA_JS = '@laraxgram/luna';
@@ -51,6 +57,9 @@ class PackageRegistry
         'laraxgram/watchdog' => 'watchdog',
         'laraxgram/tempora' => 'tempora',
         'laraxgram/mcp' => 'mcp',
+        'laraxgram/ai' => 'ai',
+        'laraxgram/sentinel' => 'sentinel',
+        'laraxgram/probe' => 'probe',
         'tailwindcss' => 'tailwindcss',
     ];
 

@@ -3,7 +3,7 @@
 <a name="introduction"></a>
 ## Introduction
 
-LaraGraml provides an expressive, minimal API around the [Guzzle HTTP client](http://docs.guzzlephp.org/en/stable/), allowing you to quickly make outgoing HTTP requests to communicate with other web applications. LaraGraml's wrapper around Guzzle is focused on its most common use cases and a wonderful developer experience.
+LaraGram provides an expressive, minimal API around its own HTTP client in the `LaraGram\Http\Client` component, allowing you to quickly make outgoing HTTP requests to communicate with other web applications. The client is focused on its most common use cases and a wonderful developer experience.
 
 <a name="making-requests"></a>
 ## Making Requests
@@ -305,7 +305,7 @@ $response = Http::retry(3, 100, throw: false)->post(/* ... */);
 <a name="error-handling"></a>
 ### Error Handling
 
-Unlike Guzzle's default behavior, LaraGram's HTTP client wrapper does not throw exceptions on client or server errors (`400` and `500` level responses from servers). You may determine if one of these errors was returned using the `successful`, `clientError`, or `serverError` methods:
+LaraGram's HTTP client does not throw exceptions on client or server errors (`400` and `500` level responses from servers). You may determine if one of these errors was returned using the `successful`, `clientError`, or `serverError` methods:
 
 ```php
 // Determine if the status code is >= 200 and < 300...
@@ -403,14 +403,14 @@ Alternatively, you may customize the exception truncation behavior per request u
 return Http::truncateExceptionsAt(240)->post(/* ... */);
 ```
 
-<a name="guzzle-middleware"></a>
-### Guzzle Middleware
+<a name="client-middleware"></a>
+### Client Middleware
 
-Since LaraGram's HTTP client is powered by Guzzle, you may take advantage of [Guzzle Middleware](https://docs.guzzlephp.org/en/stable/handlers-and-middleware.html) to manipulate the outgoing request or inspect the incoming response. To manipulate the outgoing request, register a Guzzle middleware via the `withRequestMiddleware` method:
+The client is built on a middleware stack, so you may manipulate the outgoing request or inspect the incoming response with a middleware of your own. To manipulate the outgoing request, register a middleware via the `withRequestMiddleware` method:
 
 ```php
 use LaraGram\Support\Facades\Http;
-use Psr\Http\Message\RequestInterface;
+use LaraGram\Http\Factory\RequestInterface;
 
 $response = Http::withRequestMiddleware(
     function (RequestInterface $request) {
@@ -423,7 +423,7 @@ Likewise, you can inspect the incoming HTTP response by registering a middleware
 
 ```php
 use LaraGram\Support\Facades\Http;
-use Psr\Http\Message\ResponseInterface;
+use LaraGram\Http\Factory\ResponseInterface;
 
 $response = Http::withResponseMiddleware(
     function (ResponseInterface $response) {
@@ -453,10 +453,10 @@ Http::globalResponseMiddleware(fn ($response) => $response->withHeader(
 ));
 ```
 
-<a name="guzzle-options"></a>
-### Guzzle Options
+<a name="request-options"></a>
+### Request Options
 
-You may specify additional [Guzzle request options](http://docs.guzzlephp.org/en/stable/request-options.html) for an outgoing request using the `withOptions` method. The `withOptions` method accepts an array of key / value pairs:
+You may specify additional request options (such as `proxy`, `cert`, `stream`, or `version`) for an outgoing request using the `withOptions` method. The available options are documented on the `LaraGram\Http\Client\Core\RequestOptions` class. The `withOptions` method accepts an array of key / value pairs:
 
 ```php
 $response = Http::withOptions([

@@ -34,8 +34,8 @@ versions [supported by LaraGram](/v4/database#introduction).
 | Version | PHP (*)   | Release         | Bug Fixes Until    | Security Fixes Until | Status                                 |
 |---------|-----------|-----------------|--------------------|----------------------|----------------------------------------|
 | 3       | 8.2 - 8.5 | July 17th, 2025 | February 1th, 2027 | July 1th, 2027       | <Badge type="tip" text="Stable" />     |
-| 4       | 8.5       | July 16th, 2026 | February 1th, 2028 | July 1th, 2028       | <Badge type="tip" text="Stable " />    |
-| 5       | 8.5       | Q2 2027         | Q4 2028            | Q2 2028              | <Badge type="info" text="Upcoming " /> |
+| 4       | 8.3 - 8.5 | July 16th, 2026 | February 1th, 2028 | July 1th, 2028       | <Badge type="tip" text="Stable " />    |
+| 5       | 8.4 - 8.5 | Q2 2027         | Q4 2028            | Q2 2028              | <Badge type="info" text="Upcoming " /> |
 
 </div>
 
@@ -124,7 +124,7 @@ immediately familiar to LaraGram (and Laravel) developers:
 - [**Routing**](/v4/routing) and [**URL generation**](/v4/urls) for defining and building
   web endpoints.
 - [**HTTP requests**](/v4/http-requests) and [**responses**](/v4/http-responses), plus an
-  expressive [**HTTP client**](/v4/http-client) built on Guzzle for outgoing requests.
+  expressive [**HTTP client**](/v4/http-client) for outgoing requests.
 - [**Blade templates**](/v4/blade) and [**views**](/v4/views) for server-rendered HTML.
 - [**Asset bundling with Vite**](/v4/vite) via an official plugin and Blade directive.
 - [**HTTP sessions**](/v4/session) with database, Redis, Memcached, and other backends.

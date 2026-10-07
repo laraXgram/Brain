@@ -17,20 +17,27 @@ Storage::disk('local')->put("exports/{$export->id}.csv", $csv);
 - Run `php laragram storage:link` once per environment for the public disk.
 - Generate file names yourself (ids, UUIDs, `fileUniqueId()`); never build paths from user input.
 
+## Hand Out Private Files With Temporary URLs
+
+A private file does not need a public copy. `Storage::temporaryUrl($path, now()->addMinutes(5))` gives a link that expires; on the `local` driver it requires `'serve' => true` on the disk. Prefer it over copying a file to the `public` disk, and prefer `$disk->serve($request, $path)` over `get()` + `response()` when a controller streams a file, so the whole file is never loaded into memory.
+
 ## Files From Telegram
 
 - Validate size and type before downloading: `$request->file()->last()->fileSize()`, `isPhoto()`, and the document's MIME type.
 - Download with `$media->download($path, $disk)` into a dedicated directory, or store only the `file_id` when the file just needs to be re-sent by the same bot.
 - Bot API downloads are limited to 20 MB (larger files need a self-hosted Bot API server or MTProto).
 - Download large or many files in a queued job, not in the webhook handler.
+- To process an incoming image instead of storing it as is, use `$request->image()` (or `$media->image()`), which downloads lazily and returns an immutable `LaraGram\Image\Image` (see the `image-manipulation` skill).
 
 ## Files To Telegram
 
 - Reuse stored `file_id`s. Upload local files with `new \CURLFile(Storage::disk('local')->path($path))`, or pass a public HTTPS URL.
+- Upload processed images from memory with `$image->toInputFile()` instead of writing a temporary file.
 - Delete temporary files after uploading (`Storage::delete()` in a `finally` block or a scheduled cleanup).
 
 ## Uploads From Web and Mini Apps
 
 - Validate with rules (`file`, `image`, `mimes:`, `max:`) in a form request before storing.
+- Resize or convert uploaded images with `$request->image('avatar')->cover(400, 400)->toWebp()->store('avatars', 'public')` rather than storing the original and processing it later.
 - Store with `putFile` / `store` so names are generated, and keep the original client name only as metadata.
 - Under Surge, don't keep file handles or temporary uploads across requests.

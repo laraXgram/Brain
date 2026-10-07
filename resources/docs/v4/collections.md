@@ -4403,7 +4403,7 @@ $users->take(20)->all();
 The `withHeartbeat` method allows you to execute a callback at regular time intervals while a lazy collection is being enumerated. This is particularly useful for long-running operations that require periodic maintenance tasks, such as extending locks or sending progress updates:
 
 ```php
-use Carbon\CarbonInterval;
+use LaraGram\Tempora\TemporaInterval;
 use LaraGram\Support\Facades\Cache;
 
 $lock = Cache::lock('generate-reports', seconds: 60 * 5);
@@ -4413,8 +4413,8 @@ if ($lock->get()) {
         Report::where('status', 'pending')
             ->lazy()
             ->withHeartbeat(
-                CarbonInterval::minutes(4),
-                fn () => $lock->extend(CarbonInterval::minutes(5))
+                TemporaInterval::minutes(4),
+                fn () => $lock->extend(TemporaInterval::minutes(5))
             )
             ->each(fn ($report) => $report->process());
     } finally {

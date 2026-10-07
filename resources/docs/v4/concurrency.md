@@ -8,7 +8,7 @@ Sometimes you may need to execute several slow tasks which do not depend on one 
 <a name="how-it-works"></a>
 #### How it Works
 
-LaraGram achieves concurrency by serializing the given closures and dispatching them to a hidden Commander CLI command, which unserializes the closures and invokes it within its own PHP process. After the closure has been invoked, the resulting value is serialized back to the parent process.
+LaraGram achieves concurrency by serializing the given closures and dispatching them to a hidden Artisan CLI command, which unserializes the closures and invokes it within its own PHP process. After the closure has been invoked, the resulting value is serialized back to the parent process.
 
 The `Concurrency` facade supports three drivers: `process` (the default), `fork`, and `sync`.
 
@@ -41,7 +41,7 @@ To use a specific driver, you may use the `driver` method:
 $results = Concurrency::driver('fork')->run(...);
 ```
 
-Or, to change the default concurrency driver, you should publish the `concurrency` configuration file via the `config:publish` Commander command and update the `default` option within the file:
+Or, to change the default concurrency driver, you should publish the `concurrency` configuration file via the `config:publish` Artisan command and update the `default` option within the file:
 
 ```shell
 php laragram config:publish concurrency
@@ -80,7 +80,7 @@ use LaraGram\Support\Facades\DB;
 ], timeout: 30);
 ```
 
-You may also provide a `CarbonInterval` instance if you prefer a more expressive timeout definition:
+You may also provide a `TemporaInterval` instance if you prefer a more expressive timeout definition:
 
 ```php
 use LaraGram\Support\Facades\Concurrency;

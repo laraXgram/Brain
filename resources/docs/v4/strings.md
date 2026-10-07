@@ -1735,13 +1735,13 @@ return (string) Str::ulid();
 // 01gd6r360bp37zj17nxb55yv40
 ```
 
-If you would like to retrieve a `LaraGram\Support\Carbon` date instance representing the date and time that a given ULID was created, you may use the `createFromId` method provided by LaraGram's Carbon integration:
+If you would like to retrieve a `LaraGram\Support\Tempora` date instance representing the date and time that a given ULID was created, you may use the `createFromId` method provided by LaraGram's date integration:
 
 ```php
-use LaraGram\Support\Carbon;
+use LaraGram\Support\Tempora;
 use LaraGram\Support\Str;
 
-$date = Carbon::createFromId((string) Str::ulid());
+$date = Tempora::createFromId((string) Str::ulid());
 ```
 
 During testing, it may be useful to "fake" the value that is returned by the `Str::ulid` method. To accomplish this, you may use the `createUlidsUsing` method:
@@ -1791,7 +1791,7 @@ return (string) Str::uuid();
 During testing, it may be useful to "fake" the value that is returned by the `Str::uuid` method. To accomplish this, you may use the `createUuidsUsing` method:
 
 ```php
-use Ramsey\Uuid\Uuid;
+use LaraGram\Support\String\Uid\Uuid;
 
 Str::createUuidsUsing(function () {
     return Uuid::fromString('eadbfeac-5258-45c2-bab7-ccb9b5ef74f9');

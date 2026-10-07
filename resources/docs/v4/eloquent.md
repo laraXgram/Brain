@@ -194,14 +194,14 @@ By default, the `HasUuids` trait will generate [UUIDv7](/v4/strings#method-str-u
 You can override the UUID generation process for a given model by defining a `newUniqueId` method on the model. In addition, you may specify which columns should receive UUIDs by defining a `uniqueIds` method on the model:
 
 ```php
-use Ramsey\Uuid\Uuid;
+use LaraGram\Support\String\Uid\Uuid;
 
 /**
  * Generate a new UUID for the model.
  */
 public function newUniqueId(): string
 {
-    return (string) Uuid::uuid4();
+    return (string) Uuid::v4();
 }
 
 /**
@@ -1126,7 +1126,7 @@ class Flight extends Model
 ```
 
 > [!NOTE]
-> The `SoftDeletes` trait will automatically cast the `deleted_at` attribute to a `DateTime` / `Carbon` instance for you.
+> The `SoftDeletes` trait will automatically cast the `deleted_at` attribute to a `DateTime` / `Tempora` instance for you.
 
 You should also add the `deleted_at` column to your database table. The LaraGram [schema builder](/v4/migrations) contains a helper method to create this column:
 

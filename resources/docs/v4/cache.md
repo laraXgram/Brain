@@ -298,7 +298,7 @@ The `touch` method allows you to extend the lifetime (TTL) of an existing cache 
 Cache::touch('key', 3600);
 ```
 
-You may provide a `DateTimeInterface`, `DateInterval`, or `Carbon` instance to specify an exact expiration time:
+You may provide a `DateTimeInterface`, `DateInterval`, or `Tempora` instance to specify an exact expiration time:
 
 ```php
 Cache::touch('key', now()->addHours(2));
