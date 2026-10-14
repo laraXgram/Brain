@@ -35,12 +35,12 @@ If your application will also offer a stateless API, you may enable API routing 
 php laragram install:api
 ```
 
-The `install:api` command creates the `routes/api.php` file:
+The `install:api` command creates the `routes/api.php` file. Protect its routes with [LaraGram Citadel](/v4/citadel), which authenticates personal access tokens, OAuth tokens, SPA sessions and Telegram Mini Apps with a single guard:
 
 ```php
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware('auth:citadel');
 ```
 
 The routes in `routes/api.php` are stateless and are assigned to the `api` [middleware group](/v4/middleware#laragrams-default-middleware-groups). Additionally, the `/api` URI prefix is automatically applied to these routes, so you do not need to manually apply it to every route in the file. You may change the prefix by modifying your application's `bootstrap/app.php` file:

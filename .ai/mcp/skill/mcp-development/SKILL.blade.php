@@ -204,7 +204,7 @@ class AnnounceToUsers extends Tool
 
 ## Authentication and Authorization
 
-- Protect web servers with route middleware (for example `auth:citadel` tokens), or configure OAuth with `Mcp::oauthRoutes()` when LaraGram Passport is installed.
+- Protect web servers with route middleware (for example `auth:citadel` tokens), or configure OAuth with `Mcp::oauthRoutes()` when `laraxgram/citadel` is installed (its device flow lets users approve MCP clients in the bot).
 - Require token abilities per primitive with `#[RequiresAbility('orders:read')]`; unauthorized primitives are hidden and refused.
 - Users can receive a token from the bot itself: register `Bot::onCommand('mcp {action?}', \LaraGram\Mcp\Telegram\Auth\IssueAccessToken::class)` and configure it with `IssueAccessToken::using(...)`.
 - `shouldRegister(Request $request)` controls discovery, but it must not be the only authorization check for sensitive operations.
