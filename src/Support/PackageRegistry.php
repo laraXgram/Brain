@@ -31,6 +31,8 @@ class PackageRegistry
 
     public const PROBE = 'laraxgram/probe';
 
+    public const CITADEL = 'laraxgram/citadel';
+
     public const LUNA_LARAGRAM = 'laraxgram/luna';
 
     public const LUNA_JS = '@laraxgram/luna';
@@ -60,6 +62,7 @@ class PackageRegistry
         'laraxgram/ai' => 'ai',
         'laraxgram/sentinel' => 'sentinel',
         'laraxgram/probe' => 'probe',
+        'laraxgram/citadel' => 'citadel',
         'tailwindcss' => 'tailwindcss',
     ];
 

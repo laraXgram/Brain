@@ -9,7 +9,7 @@ LaraGram authenticates different entry points with different guards. Use the one
 | Bot listens (`listens/*.php`) | `bot` | The Telegram `user_id` of the update, looked up through the `users` provider (`column => user_id`) |
 | Web routes (`routes/web.php`) | `web` (session) | A login form and the session |
 | Telegram Mini Apps (Luna) | `telegram` | Init data validated by the `telegram` middleware |
-| API tokens (`routes/api.php`, MCP servers) | `citadel` (when `laraxgram/citadel` is installed) | Personal access tokens |
+| API (`routes/api.php`, MCP servers) | `citadel` (when `laraxgram/citadel` is installed) | Personal access tokens, OAuth access tokens, or the stateful guards listed in `config/citadel.php` (`web`, Luna's `telegram`) |
 | Jobs, commands, scheduled tasks | none | Pass the user explicitly |
 
 - `Auth::user()` in a listen is `null` for Telegram users without a `users` row; create the row (for example on `/start`) instead of assuming it exists.
@@ -38,6 +38,13 @@ public function store(LoginRequest $request): RedirectResponse
 - Hash passwords with the `hashed` cast or `Hash::make()`; never store or log plain passwords.
 - Starter kits (React, Vue, Svelte with Luna) already contain the auth flows. Extend them instead of writing a second login system.
 
+## API Tokens
+
+- Install `laraxgram/citadel` for any HTTP API: protect routes with `auth:citadel` and check abilities with `abilities:`/`ability:` or `$request->user()->tokenCan(...)`. Don't build a custom token table or guard.
+- Issue tokens with `$user->createToken($name, $abilities, $expiresAt)` and show `plainTextToken` once; only its hash is stored.
+- Let Mini Apps call the API through Luna's `telegram` guard (add it to `citadel.guard`), and exchange init data for OAuth tokens only when another service needs a token.
+- Use OAuth (`citadel:client`) only for third parties, MCP clients and devices; machine-to-machine routes use `EnsureClientIsResourceOwner` instead of `auth:citadel`.
+
 ## Linking Telegram and Web Accounts
 
-When the same person uses the bot and the web app, link accounts by the Telegram id verified on each side (the bot guard or the Mini App `telegram` guard). Don't accept a Telegram id typed into a web form; use a one-time token sent through the bot, or the Mini App's validated init data.
+When the same person uses the bot and the web app, link accounts by the Telegram id verified on each side (the bot guard or the Mini App `telegram` guard). Don't accept a Telegram id typed into a web form; use a one-time token sent through the bot, the Mini App's validated init data, or Citadel's Telegram Login (`/oauth/telegram/login`), which verifies the payload Telegram signs.
