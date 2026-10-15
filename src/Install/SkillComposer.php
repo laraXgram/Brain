@@ -10,8 +10,8 @@ use LaraGram\Brain\Install\Concerns\DiscoverPackagePaths;
 use LaraGram\Brain\Support\SkillParseFailures;
 use LaraGram\Brain\Discovery\Package;
 use LaraGram\Brain\Discovery\ProjectManager;
-use LaraGram\Brain\Support\Yaml\Exceptions\ParseException;
-use LaraGram\Brain\Support\Yaml\Yaml;
+use LaraGram\Support\Yaml\Exceptions\ParseException;
+use LaraGram\Support\Yaml\Yaml;
 
 class SkillComposer
 {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace LaraGram\Brain\Rules;
 
-use LaraGram\Brain\Support\Yaml\Yaml;
+use LaraGram\Support\Yaml\Yaml;
 use Throwable;
 
 class RuleFrontmatter

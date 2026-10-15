@@ -8,7 +8,7 @@ use LaraGram\Support\Collection;
 use LaraGram\Support\Facades\File;
 use LaraGram\Support\Str;
 use RuntimeException;
-use LaraGram\Brain\Support\Yaml\Yaml;
+use LaraGram\Support\Yaml\Yaml;
 use Throwable;
 
 use function LaraGram\Filesystem\join_paths;

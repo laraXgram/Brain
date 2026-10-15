@@ -6,7 +6,7 @@ namespace LaraGram\Brain\Discovery\Scanners;
 
 use Exception;
 use LaraGram\Brain\Discovery\PackageCollection;
-use LaraGram\Brain\Support\Yaml\Yaml;
+use LaraGram\Support\Yaml\Yaml;
 
 class PnpmPackageLock extends JsPackageScanner
 {
