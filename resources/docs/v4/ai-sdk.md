@@ -3175,7 +3175,7 @@ You may also add a vector index to speed up similarity searches. When calling `i
 $table->vector('embedding', dimensions: 1536)->index();
 ```
 
-On your Eloquent model, you may cast the vector column to an array of floats:
+On your Eloquent model, you should cast the vector column using the `AsVector` cast:
 
 ```php
 use LaraGram\Database\Eloquent\Casts\AsVector;
@@ -3183,7 +3183,7 @@ use LaraGram\Database\Eloquent\Casts\AsVector;
 protected function casts(): array
 {
     return [
-        'embedding' => 'array',
+        'embedding' => AsVector::class,
     ];
 }
 ```
