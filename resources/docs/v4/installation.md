@@ -70,20 +70,25 @@ After you have installed PHP, Composer, and the LaraGram installer, you're ready
 laragram new example-app
 ```
 
-The installer asks all of its questions up front, then installs and configures the application without interrupting you:
+The installer asks all of its questions up front, then installs and configures the application without interrupting you. First, it asks which parts of LaraGram you would like to configure. Only the Bot API is selected by default:
 
-- Whether you would like to build a [Telegram Mini App](/v4/starter-kits), and with which frontend stack (React, Vue, or Svelte).
-- Your bot token. The token is verified with Telegram, and the bot's username and ID are written to your `.env` file as well.
-- The public URL of your bot, and whether the webhook should be set once the application is installed.
-- Whether you would like to use [MTProto](/v4/mtproto) for userbot / client development, and your Telegram API ID and hash.
-- Your database. Only the drivers whose PDO extension is installed may be selected, and SQLite is used by default.
-- Whether you would like to use [LaraGram Surge](/v4/surge), and with which server.
+| Feature | What the installer asks and configures |
+| --- | --- |
+| Bot API | Your bot token, which is verified with Telegram so the bot's username and ID are written to your `.env` file as well, the URL Telegram should send updates to, and whether the webhook should be set once the application is installed. |
+| Local Bot API server | Which [Bot API server](/v4/apiserver) you would like to run, the official `telegram-bot-api` binary or the LaraGram API Server, and your Telegram API ID and hash. The bot is pointed at the local server, which also accepts plain HTTP webhook URLs. The LaraGram API Server is installed with Composer. |
+| MTProto | Installs [MTProto](/v4/mtproto) for userbot / client development. When a local Bot API server is configured too, MTProto may use the same API ID and hash or its own. |
+| Telegram Mini App | Which [starter kit](/v4/starter-kits) you would like to build your Mini App with: React, Vue, or Svelte. |
+| LaraGram Brain | Installs [LaraGram Brain](/v4/brain) to improve AI assisted coding. |
+| API routes | Creates the `routes/api.php` file for your application's API. |
+| LaraGram Surge | Which server [Surge](/v4/surge) should use. MTProto and the LaraGram API Server run on Surge with Swoole, so Surge is configured for them automatically. |
 
-Every question may be skipped by pressing Enter, and you may also provide the values later in your application's `.env` file. Once the application has been created, the installer displays the commands you need to start it. Typically, you will start LaraGram's local development server using the `serve` laragram script:
+Finally, the installer asks which database your application will use. Only the drivers whose PDO extension is installed may be selected, and SQLite is used by default.
+
+Every question may be skipped by pressing Enter, and you may also provide the values later in your application's `.env` file. Once the application has been created, the installer displays the commands you need to start it. Typically, you will start all of the processes your application needs, such as the development server, the queue worker, and your local Bot API server, using the [`dev`](/v4/commander#the-dev-command) Commander command:
 
 ```shell
 cd example-app
-php laragram serve
+php laragram dev
 ```
 
 Once you have started the development server, your application will be accessible at `http://localhost:9000` for set webhook. Next, you're ready to [start taking your next steps into the LaraGram ecosystem](#next-steps). Of course, you may also want to [configure a database](#databases-and-migrations).
@@ -100,16 +105,19 @@ laragram new example-app --token=123456:ABC-DEF --bot-url=https://example.com --
 | Option | Description |
 | --- | --- |
 | `--token` | The Telegram bot token from @BotFather. |
-| `--bot-url` | The public HTTPS URL Telegram should send updates to. |
-| `--webhook` | Set the bot webhook after installation. Requires `--token` and `--bot-url`. |
+| `--bot-url` | The URL Telegram should send updates to. It must use HTTPS, unless a local Bot API server is configured. |
+| `--webhook` | Set the bot webhook after installation. Requires `--token` and `--bot-url`, and is not available with a local Bot API server, since the server is not running yet. |
+| `--api-server` | Run a local Bot API server: `official` (default) or `laragram`. |
+| `--api-id`, `--api-hash` | Your Telegram API credentials from [my.telegram.org](https://my.telegram.org), used by the local Bot API server and MTProto. |
 | `--mtproto` | Install MTProto for userbot / client development. |
-| `--api-id`, `--api-hash` | Your Telegram API credentials from [my.telegram.org](https://my.telegram.org). |
-| `--database` | The database driver: `sqlite`, `mysql`, `mariadb`, `pgsql`, or `sqlsrv`. |
-| `--surge` | Install LaraGram Surge with the given server: `swoole` (default), `roadrunner`, or `frankenphp`. |
+| `--client-api-id`, `--client-api-hash` | Separate credentials for MTProto, next to a local Bot API server. They are stored as `CLIENT_API_ID` and `CLIENT_API_HASH`. |
 | `--react`, `--vue`, `--svelte` | Install the given Mini App starter kit. |
 | `--using` | Install a community maintained starter kit. |
+| `--brain` | Install [LaraGram Brain](/v4/brain). |
+| `--api` | Create the API routes file. |
+| `--surge` | Install LaraGram Surge with the given server: `swoole` (default), `roadrunner`, or `frankenphp`. |
+| `--database` | The database driver: `sqlite`, `mysql`, `mariadb`, `pgsql`, or `sqlsrv`. |
 | `--npm`, `--pnpm`, `--bun`, `--yarn`, `--no-node` | Choose the package manager that installs and builds the frontend dependencies, or skip them. |
-| `--brain`, `--no-brain` | Install or skip [LaraGram Brain](/v4/brain). Brain is installed by default when the installer runs interactively. |
 | `--git`, `--branch` | Initialize a Git repository with the given default branch. |
 | `--github`, `--organization` | Create a repository on GitHub using the `gh` CLI and push the application to it. |
 | `--dev` | Install the latest development release. |

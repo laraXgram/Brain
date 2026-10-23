@@ -128,6 +128,14 @@ if ($result->failed()) {
 
 Pass commands as arrays to avoid shell injection, never interpolate user input into command strings, and use `Process::pool()` / `Process::concurrently()` for parallel work. `start()` runs asynchronously; call `wait()` before relying on the result.
 
+## Local Development Processes
+
+`php laragram dev` (also `composer run dev`) starts every process the application needs in one terminal: `server` (`serve`, replaced by `surge:start --watch` when Surge is installed), `apiserver` (when `API_ENDPOINT` points to localhost and `API_ID` / `API_HASH` are set), `client` (MTProto, only when its pump is disabled), `queue`, `logs` (Watchdog) and `vite`. List them with `php laragram dev:list`.
+
+- To run another long-lived process during development (a scheduler, a second queue, a Node watcher), register it in `AppServiceProvider::boot()` instead of telling the user to open more terminals: `DevCommands::commander('schedule:work', 'scheduler')`, `DevCommands::node('storybook')`, `DevCommands::register('some-binary --watch', 'name')` (`LaraGram\Foundation\DevCommands`). Reusing a default name (`server`, `queue`, ...) replaces that process.
+- `DevCommands::only(...)`, `except(...)`, `order([...])`, `withoutVendorCommands()`, `withoutDefaultCommands()`, `disableAutoRestart()`, and `stream()` / `inline()` / `withTimestamps()` customize the run.
+- When you run `dev` yourself, pass `--json` (newline-delimited JSON events) or `--inline`; the interactive tabs need a real terminal. It needs Node 22.13+ (`@laravel/multiplex`; Windows falls back to `concurrently`).
+
 ## Safety
 
 - Never create commands that print tokens, `API_HASH`, sessions, or `.env` values.

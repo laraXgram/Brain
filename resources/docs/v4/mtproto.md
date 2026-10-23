@@ -88,7 +88,7 @@ laragram new example-app
 cd example-app
 ```
 
-When the installer asks whether you would like to use MTProto, answer "Yes" (or pass the `--mtproto` option) and it also requires the package, publishes its configuration and listens file, and stores your API ID and hash, so you may skip to [Authenticating a Session](#authenticating-a-session).
+When the installer asks which parts of LaraGram you would like to configure, select **MTProto** (or pass the `--mtproto` option) and it also requires the package, publishes its configuration and listens file, configures Surge, and stores your API ID and hash, so you may skip to [Authenticating a Session](#authenticating-a-session).
 
 <a name="requiring-the-package"></a>
 ### Requiring the Package

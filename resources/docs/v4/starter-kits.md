@@ -16,7 +16,7 @@ To create a new LaraGram application using one of our starter kits, you should f
 composer global require laraxgram/installer
 ```
 
-Then, create a new LaraGram application using the LaraGram installer CLI. When the installer asks whether you would like to build a Telegram Mini App, choose your preferred starter kit. You may also choose it using the `--react`, `--vue`, or `--svelte` option:
+Then, create a new LaraGram application using the LaraGram installer CLI. When the installer asks which parts of LaraGram you would like to configure, select **Telegram Mini App** and choose your preferred starter kit. You may also choose it using the `--react`, `--vue`, or `--svelte` option:
 
 ```shell
 laragram new my-app
