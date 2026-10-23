@@ -96,6 +96,8 @@ Processes are supervised (restarted with backoff when they exit) and get a fresh
 
 ## Operations
 
+- Install: `php laragram surge:install --server=swoole|roadrunner|frankenphp` (the LaraGram installer runs it when Surge is chosen).
+- RoadRunner uses Surge's built-in worker: never add `spiral/roadrunner-http`, `spiral/roadrunner-cli`, or other `spiral/*` packages. Surge downloads the `rr` binary (RoadRunner 2023.3+ or 3.x) into the project root on install; `SURGE_GITHUB_PROXY_PREFIX` routes the download through a proxy.
 - Start: `php laragram surge:start` (`--server`, `--workers`, `--task-workers`, `--max-requests`, `--watch`); `surge:status`; `surge:stop`.
 - Development: `surge:start --watch` restarts on file changes (needs Node and `chokidar`; paths under `watch` in `config/surge.php`).
 - Deploy: `surge:reload` reloads HTTP (and task) workers. Restart the whole server when processes (such as the MTProto pump), `config/surge.php`, or the server binary changed.

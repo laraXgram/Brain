@@ -94,6 +94,11 @@ These were detected in the existing code; follow them unless the user asks other
 
 - Activate `image-manipulation` when resizing, cropping, converting, inspecting, or storing images (Telegram photos, web uploads, storage files), or when sending a processed image to Telegram.
 
+## Writing Packages
+
+- Every component of the framework is also published on its own (`laraxgram/support`, `laraxgram/console`, `laraxgram/database`, `laraxgram/request`, …), like Laravel's `illuminate/*` packages. A reusable package that only needs some of them should require those components (`^4.5`) instead of the whole framework.
+- Require `laraxgram/core` when the package uses Foundation: the application instance, path helpers such as `base_path()` or `config_path()`, or Commander bootstrapping. Foundation is not published as a component.
+
 ## Vite Error
 
 - If you receive a "Unable to locate file in Vite manifest" error, you can run `{{ $assist->nodePackageManagerCommand('run build') }}` or ask the user to run `{{ $assist->nodePackageManagerCommand('run dev') }}` or `{{ $assist->composerCommand('run dev') }}`.

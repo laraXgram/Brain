@@ -1,6 +1,6 @@
 ---
 name: image-manipulation
-description: "Processes images with LaraGram's Image component. Activate when resizing, cropping, converting, compressing, or inspecting images: photos or image documents sent to the bot ($request->image(), MediaFile::image()), files uploaded to web routes or Mini Apps ($request->image('avatar'), Image::fromUpload), files on storage disks (Storage::disk()->image(), Image::fromStorage), URLs, paths, streams, base64 or raw bytes (the Image facade), sending a processed image back to Telegram (toInputFile with sendPhoto / sendDocument), returning an image from a web route, storing processed images (store, storeAs, storePublicly), thumbnails, avatars, watermark-free conversions to WebP/JPEG/PNG/AVIF, config/images.php and IMAGE_DRIVER (gd, imagick), custom image drivers (Image::extend) or custom transformations (Image::transformUsing). Also use when the user mentions intervention/image, thumbnails, avatars, or image quality."
+description: "Processes images with LaraGram's Image component. Activate when resizing, cropping, converting, compressing, or inspecting images: photos or image documents sent to the bot ($request->image(), MediaFile::image()), files uploaded to web routes or Mini Apps ($request->image('avatar'), Image::fromUpload), files on storage disks (Storage::disk()->image(), Image::fromStorage), URLs, paths, streams, base64 or raw bytes (the Image facade), sending a processed image back to Telegram (toInputFile with sendPhoto / sendDocument), returning an image from a web route, storing processed images (store, storeAs, storePublicly), thumbnails, avatars, watermark-free conversions to WebP/JPEG/PNG/AVIF, config/images.php and IMAGE_DRIVER (gd, imagick), custom image drivers (Image::extend) or custom transformations (Image::transformUsing). Also use when the user mentions intervention/image, GD, Imagick, thumbnails, avatars, or image quality."
 license: MIT
 metadata:
   author: laraxgram
@@ -12,9 +12,10 @@ LaraGram's Image component (`LaraGram\Image`, the `Image` facade) is the port of
 
 ## Requirements First
 
-- The built-in `gd` and `imagick` drivers need the `intervention/image` package (`^4.0`), which is a suggested dependency and not installed with LaraGram. Check `composer.json` before writing image code; if it is missing, tell the user to run `composer require intervention/image:^4.0` instead of writing a fallback with raw GD calls.
-- The driver also needs the matching PHP extension (`gd` or `imagick`). The default driver comes from `config/images.php` (`'default' => env('IMAGE_DRIVER', 'gd')`); publish it with `php laragram config:publish images` only when the project needs to change it.
-- Supported inputs: JPEG, PNG, GIF, WebP, AVIF, HEIC, BMP. Anything else (SVG, PDF, TIFF) throws `LaraGram\Image\ImageException`.
+- The built-in `gd` and `imagick` drivers are part of LaraGram and need no Composer package. Never suggest installing `intervention/image`: LaraGram no longer uses it.
+- The driver needs the matching PHP extension (`gd` or `imagick`); the `gd` driver uses the `exif` extension, when installed, to orient JPEG photos. The default driver comes from `config/images.php` (`'default' => env('IMAGE_DRIVER', 'gd')`); publish it with `php laragram config:publish images` only when the project needs to change it.
+- Supported inputs: JPEG, PNG, GIF, WebP, AVIF, HEIC, BMP. Anything else (SVG, PDF, TIFF) throws `LaraGram\Image\ImageException`. HEIC output needs the `imagick` driver.
+- Animations: the `gd` driver keeps only the first frame of an animated GIF; use `imagick` when animated GIF / WebP images must stay animated.
 
 ## Reading Images
 
@@ -32,14 +33,14 @@ Sources are read lazily: a Telegram file is downloaded through `getFile` only wh
 
 ```php
 $image = $request->image()
-    ->orient()                 // apply EXIF rotation first for camera photos
+    ->orient()                 // EXIF rotation (photos are already oriented while decoded; kept for clarity)
     ->cover(512, 512)          // fill and crop to exactly 512x512
     ->toWebp()
     ->quality(80);
 ```
 
 - **Immutable:** every method returns a new instance. Always reassign (`$image = $image->scale(800)`); a bare `$image->scale(800);` does nothing.
-- Pick the right sizing method: `cover` (fill and crop, for avatars and thumbnails), `contain` (fit with padding; background `'#ffffff'` or `'dominant'`), `scale` (fit inside, never upscales — the safe default for "make it smaller"), `resize` (exact; passing only `width:` keeps the original height, so it distorts), `crop(w, h, x, y)`.
+- Pick the right sizing method: `cover` (fill and crop, for avatars and thumbnails), `contain` (fit with padding; background as hex `'#ffffff'`, `rgb()` / `rgba()`, `'transparent'` or `'dominant'`, white by default), `scale` (fit inside, never upscales — the safe default for "make it smaller"), `resize` (exact; passing only `width:` keeps the original height, so it distorts), `crop(w, h, x, y)`.
 - Effects: `rotate($deg, $background)`, `blur(0-100)`, `sharpen(0-100)`, `grayscale()`, `flipVertically()` / `flip()`, `flipHorizontally()` / `flop()`.
 - Formats: `toWebp`, `toJpg`, `toPng`, `toGif`, `toAvif`, `toHeic`, `toBmp`, or `toFormat('jpg')`; `quality(1-100)`; `optimize()` is WebP at quality 70. Without a format, the original format is kept.
 - Conditional steps use `when()` / `unless()`.
@@ -82,4 +83,4 @@ Bot::onPhoto(function (Request $request) {
 
 - Per-image driver: `->using('imagick')`, `->usingGd()`, `->usingImagick()`.
 - Custom driver: implement `LaraGram\Contracts\Image\Driver` (`process`, `dimensions`, `dominantColor`, `transformUsing`) and register it in a service provider's `boot` with `Image::extend('vips', fn ($app) => new VipsDriver)`.
-- Custom transformation: a class implementing `LaraGram\Contracts\Image\Transformation` with public readonly properties, registered per driver with `Image::transformUsing('gd', Pixelate::class, fn (\Intervention\Image\Interfaces\ImageInterface $image, Pixelate $t) => $image->pixelate($t->size))`, and applied with `->transform(new Pixelate(12))`. Register a handler for every driver the application uses (`gd` and `imagick`), or the transformation throws on the missing one.
+- Custom transformation: a class implementing `LaraGram\Contracts\Image\Transformation` with public readonly properties, registered per driver with `Image::transformUsing()`, and applied with `->transform(new Pixelate(12))`. The handler receives the driver's native image (`GdImage` for `gd`, `Imagick` for `imagick`) and must return it, e.g. `Image::transformUsing('gd', Pixelate::class, function (GdImage $image, Pixelate $t) { imagefilter($image, IMG_FILTER_PIXELATE, $t->size, true); return $image; })`. An `imagick` handler should loop over the frames (`foreach ($image as $frame)`) so animations keep working. Register a handler for every driver the application uses (`gd` and `imagick`), or the transformation throws on the missing one.

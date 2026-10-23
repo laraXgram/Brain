@@ -33,7 +33,7 @@ LaraGram is incredibly scalable. Thanks to the scaling-friendly nature of PHP an
 <a name="installing-php"></a>
 ### Installing PHP and the LaraGram Installer
 
-Before creating your first LaraGram application, make sure that your local machine has [PHP](https://php.net), [Composer](https://getcomposer.org), and [the LaraGram installer](https://github.com/laragram/installer) installed.
+Before creating your first LaraGram application, make sure that your local machine has [PHP](https://php.net), [Composer](https://getcomposer.org), and [the LaraGram installer](https://github.com/laraxgram/installer) installed.
 
 If you don't have PHP and Composer installed on your local machine, the following commands will install PHP, Composer, and the LaraGram installer on macOS, Windows, or Linux:
 
@@ -64,13 +64,22 @@ composer global require laraxgram/installer
 <a name="creating-an-application"></a>
 ### Creating an Application
 
-After you have installed PHP, Composer, and the LaraGram installer, you're ready to create a new LaraGram application. The LaraGram installer will prompt you to select your preferred database, and config your bot:
+After you have installed PHP, Composer, and the LaraGram installer, you're ready to create a new LaraGram application:
 
 ```shell
 laragram new example-app
 ```
 
-Once the application has been created, you can start LaraGram's local development server using the `serve` laragram script:
+The installer asks all of its questions up front, then installs and configures the application without interrupting you:
+
+- Whether you would like to build a [Telegram Mini App](/v4/starter-kits), and with which frontend stack (React, Vue, or Svelte).
+- Your bot token. The token is verified with Telegram, and the bot's username and ID are written to your `.env` file as well.
+- The public URL of your bot, and whether the webhook should be set once the application is installed.
+- Whether you would like to use [MTProto](/v4/mtproto) for userbot / client development, and your Telegram API ID and hash.
+- Your database. Only the drivers whose PDO extension is installed may be selected, and SQLite is used by default.
+- Whether you would like to use [LaraGram Surge](/v4/surge), and with which server.
+
+Every question may be skipped by pressing Enter, and you may also provide the values later in your application's `.env` file. Once the application has been created, the installer displays the commands you need to start it. Typically, you will start LaraGram's local development server using the `serve` laragram script:
 
 ```shell
 cd example-app
@@ -78,6 +87,35 @@ php laragram serve
 ```
 
 Once you have started the development server, your application will be accessible at `http://localhost:9000` for set webhook. Next, you're ready to [start taking your next steps into the LaraGram ecosystem](#next-steps). Of course, you may also want to [configure a database](#databases-and-migrations).
+
+<a name="installer-options"></a>
+#### Installer Options
+
+Each question of the installer may also be answered using an option, which allows you to create applications without any interaction, for example from a script:
+
+```shell
+laragram new example-app --token=123456:ABC-DEF --bot-url=https://example.com --webhook --database=mysql --surge=swoole --git -n
+```
+
+| Option | Description |
+| --- | --- |
+| `--token` | The Telegram bot token from @BotFather. |
+| `--bot-url` | The public HTTPS URL Telegram should send updates to. |
+| `--webhook` | Set the bot webhook after installation. Requires `--token` and `--bot-url`. |
+| `--mtproto` | Install MTProto for userbot / client development. |
+| `--api-id`, `--api-hash` | Your Telegram API credentials from [my.telegram.org](https://my.telegram.org). |
+| `--database` | The database driver: `sqlite`, `mysql`, `mariadb`, `pgsql`, or `sqlsrv`. |
+| `--surge` | Install LaraGram Surge with the given server: `swoole` (default), `roadrunner`, or `frankenphp`. |
+| `--react`, `--vue`, `--svelte` | Install the given Mini App starter kit. |
+| `--using` | Install a community maintained starter kit. |
+| `--npm`, `--pnpm`, `--bun`, `--yarn`, `--no-node` | Choose the package manager that installs and builds the frontend dependencies, or skip them. |
+| `--brain`, `--no-brain` | Install or skip [LaraGram Brain](/v4/brain). Brain is installed by default when the installer runs interactively. |
+| `--git`, `--branch` | Initialize a Git repository with the given default branch. |
+| `--github`, `--organization` | Create a repository on GitHub using the `gh` CLI and push the application to it. |
+| `--dev` | Install the latest development release. |
+| `--force` | Install even if the directory already exists. |
+
+When the installer is executed by an AI coding agent, it automatically runs without interaction and reports its result as JSON.
 
 <a name="initial-configuration"></a>
 ## Initial Configuration
@@ -110,6 +148,8 @@ Or, by setting `api_id` and `api_hash`, you can start your own API server by run
 ```shell
 php laragram start:apiserver
 ```
+
+The command runs the official `telegram-bot-api` binary by default. You may also use the [LaraGram API Server](/v4/apiserver) by setting the `API_BINARY` environment variable to `laragram-server`.
 
 <a name="databases-and-migrations"></a>
 ### Databases and Migrations

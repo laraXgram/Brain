@@ -3,7 +3,7 @@
 <a name="introduction"></a>
 ## Introduction
 
-[LaraGram Surge](https://github.com/laragram/surge) supercharges your application's performance by serving your application using high-powered application servers, including [Open Swoole](https://openswoole.com/) and [Swoole](https://github.com/swoole/swoole-src). Surge boots your application once, keeps it in memory, and then feeds it requests at supersonic speeds.
+[LaraGram Surge](https://github.com/laraxgram/surge) supercharges your application's performance by serving your application using high-powered application servers, including [Open Swoole](https://openswoole.com/), [Swoole](https://github.com/swoole/swoole-src), and [RoadRunner](https://roadrunner.dev). Surge boots your application once, keeps it in memory, and then feeds it requests at supersonic speeds.
 
 <a name="installation"></a>
 ## Installation
@@ -14,11 +14,16 @@ Surge may be installed via the Composer package manager:
 composer require laraxgram/surge
 ```
 
-After installing Surge, you may execute the `surge:install` Commander command, which will install Surge's configuration file into your application:
+After installing Surge, you may execute the `surge:install` Commander command, which will install Surge's configuration file into your application. The command asks which application server you would like to use, or you may provide it using the `--server` option:
 
 ```shell
 php laragram surge:install
+
+php laragram surge:install --server=roadrunner
 ```
+
+> [!NOTE]
+> When you create your application using the [LaraGram installer](/v4/installation#creating-an-application), you may choose Surge and its server while creating the application, and the installer runs this command for you.
 
 <a name="server-prerequisites"></a>
 ## Server Prerequisites
@@ -42,6 +47,19 @@ pecl install openswoole
 ```
 
 Using LaraGram Surge with Open Swoole grants the same functionality provided by Swoole, such as concurrent tasks, ticks, and intervals.
+
+<a name="roadrunner"></a>
+### RoadRunner
+
+[RoadRunner](https://roadrunner.dev) is powered by the RoadRunner binary, which is built using Go. Surge talks to RoadRunner using its own built-in worker, so no additional Composer package is required. When you install Surge for RoadRunner, or start a RoadRunner based Surge server without a RoadRunner binary, Surge will offer to download the RoadRunner binary for your operating system and place it in your application's root directory, along with a `.rr.yaml` configuration file:
+
+```shell
+php laragram surge:install --server=roadrunner
+
+php laragram surge:start
+```
+
+Surge supports RoadRunner 2023.3 and newer, including the RoadRunner 3.x releases. If you already have a RoadRunner binary installed on your system, Surge will use it instead of downloading one. If GitHub is not reachable from your server, you may download the binary through a proxy by setting the `SURGE_GITHUB_PROXY_PREFIX` environment variable to the proxy's URL prefix.
 
 <a name="swoole-configuration"></a>
 #### Swoole Configuration

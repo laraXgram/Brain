@@ -3,7 +3,7 @@
 <a name="introduction"></a>
 ## Introduction
 
-LaraGram provides a fluent image manipulation API that allows you to resize, crop, encode, and store images using the same expressive conventions found throughout the framework. LaraGram's image features are powered by [Intervention Image](https://image.intervention.io/) and support the GD and Imagick PHP extensions.
+LaraGram provides a fluent image manipulation API that allows you to resize, crop, encode, and store images using the same expressive conventions found throughout the framework. LaraGram's image features are built into the framework and support the GD and Imagick PHP extensions, without requiring any additional package.
 
 The image API is useful when working with photos and documents sent to your bot, files uploaded to your web routes or Mini Apps, files stored on LaraGram [filesystem disks](/v4/filesystem), local files, remote URLs, or raw image bytes:
 
@@ -23,13 +23,10 @@ $path = Image::fromStorage('avatars/photo.jpg', 'public')
 <a name="installation"></a>
 ## Installation
 
-Before using LaraGram's image manipulation features, install the Intervention Image package via Composer:
+LaraGram's image manipulation features do not require any additional package. You only need to ensure your PHP installation has either the GD or Imagick extension installed, depending on which driver your application will use. The `gd` driver also uses the `exif` extension, when it is installed, to orient JPEG images according to their EXIF data.
 
-```shell
-composer require intervention/image:^4.0
-```
-
-You should also ensure your PHP installation has either the GD or Imagick extension installed, depending on which driver your application will use.
+> [!NOTE]
+> GD does not support animations, so the `gd` driver only keeps the first frame of an animated GIF. The `imagick` driver keeps every frame of animated GIF and WebP images.
 
 <a name="configuration"></a>
 ### Configuration
@@ -200,7 +197,7 @@ $image = $image->contain(400, 400, '#ffffff');
 $image = $image->contain(400, 400, 'dominant');
 ```
 
-You may specify `dominant` as the background color to fill empty space using the image's dominant color.
+You may specify `dominant` as the background color to fill empty space using the image's dominant color. Background colors may be given as hex colors such as `#fff`, `#ffffff`, or `#ffffff80`, as `rgb()` / `rgba()` colors, or as `transparent`. When no background color is given, white is used.
 
 You may crop an image using the `crop` method. The first two arguments are the desired width and height, and the optional third and fourth arguments specify the crop's `x` and `y` coordinates:
 
@@ -463,7 +460,7 @@ class VipsDriver implements Driver
 ```
 
 > [!NOTE]
-> To better understand how to implement a custom image driver, you may review the framework's built-in `LaraGram\Image\Drivers\InterventionDriver` class.
+> To better understand how to implement a custom image driver, you may review the framework's built-in `LaraGram\Image\Drivers\NativeDriver` class, which both the `gd` and `imagick` drivers extend.
 
 Once you have implemented your custom driver, you may register it using the `Image` facade's `extend` method. Typically, this should be done in the `boot` method of a service provider:
 
@@ -519,17 +516,34 @@ class Pixelate implements Transformation
 }
 ```
 
-Next, register a handler for the transformation and driver using the `Image` facade's `transformUsing` method. The handler of the built-in `gd` and `imagick` drivers receives an `Intervention\Image\Interfaces\ImageInterface` instance, giving you access to the full Intervention Image API. Typically, this should be done in the `boot` method of a service provider:
+Next, register a handler for the transformation and driver using the `Image` facade's `transformUsing` method. The handler receives the native image of the driver, a `GdImage` instance for the `gd` driver or an `Imagick` instance for the `imagick` driver, and must return the transformed image. Typically, this should be done in the `boot` method of a service provider:
 
 ```php
 use App\Images\Transformations\Pixelate;
-use Intervention\Image\Interfaces\ImageInterface;
+use GdImage;
+use Imagick;
 use LaraGram\Support\Facades\Image;
 
-Image::transformUsing('gd', Pixelate::class, function (ImageInterface $image, Pixelate $transformation) {
-    return $image->pixelate($transformation->size);
+Image::transformUsing('gd', Pixelate::class, function (GdImage $image, Pixelate $transformation) {
+    imagefilter($image, IMG_FILTER_PIXELATE, $transformation->size, true);
+
+    return $image;
+});
+
+Image::transformUsing('imagick', Pixelate::class, function (Imagick $image, Pixelate $transformation) {
+    foreach ($image as $frame) {
+        $width = $frame->getImageWidth();
+        $height = $frame->getImageHeight();
+
+        $frame->scaleImage(max(1, intdiv($width, $transformation->size)), max(1, intdiv($height, $transformation->size)));
+        $frame->scaleImage($width, $height);
+    }
+
+    return $image;
 });
 ```
+
+Since the `imagick` driver keeps every frame of animated images, you should apply your transformation to each frame, as in the example above.
 
 Once the transformation handler has been registered, you may apply the transformation to an image:
 
