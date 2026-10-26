@@ -213,7 +213,7 @@ Generate the invoice link server-side with [`Luna::invoiceLink()`](/v4/luna-tma#
 <a name="viewport"></a>
 ## Viewport & Home Screen
 
-Control fullscreen mode, screen orientation, and the add-to-home-screen prompt:
+Control fullscreen mode, screen orientation, and the add-to-home-screen prompt. To open the Mini App fullscreen from the start, use the `fullscreen` option of [`bootstrapTelegram()`](/v4/luna-tma#bootstrapping) instead of calling `telegramRequestFullscreen()` yourself:
 
 ```js
 import {

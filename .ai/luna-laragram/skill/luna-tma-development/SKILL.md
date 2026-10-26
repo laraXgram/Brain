@@ -101,6 +101,11 @@ bootstrapTelegram()
 createLunaApp({ /* resolve, setup */ })
 ```
 
+Options worth knowing:
+
+- `fullscreen: true | 'mobile'` requests fullscreen on launch (`'mobile'` = Android and iOS only, Bot API 8.0+). Telegram's buttons then float over the page, so pad the top with `--tg-safe-area-inset-top` plus `--tg-content-safe-area-inset-top`. Prefer this over calling `telegramRequestFullscreen()` on mount.
+- `backButton: { canGoBack, onBack }` replaces the default depth rule app-wide. While the BackButton is hidden, Android's back gesture closes the Mini App, so a page opened directly from a bot button (no history) needs a `canGoBack` that reads the current page and an `onBack` that visits the home page with `replace: true` when `getTelegramBackDepth()` is 0. The button is re-synced after every finished visit, `replace` visits included.
+
 Framework bindings (React shown; Vue and Svelte export the same names, Svelte uses `getTelegramUser()` / `getTelegramSharedContext()`):
 
 | Need | API |
