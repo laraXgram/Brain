@@ -188,6 +188,31 @@ if (isset($sender->title)) {
 > [!WARNING]
 > Never authorize an action by `user()->id` for messages sent on behalf of a chat, since every such message shares the same placeholder user. Check `sender()` instead.
 
+<a name="dumping-updates"></a>
+#### Dumping Updates
+
+While building a handler, `dd` sends the whole update to the chat it came from, as pretty-printed JSON, and stops handling it — like Laravel's `dd`, but you read it in Telegram:
+
+```php
+Bot::onCommand('start', function (Request $request) {
+    $request->dd();
+});
+```
+
+Any part of the update may be dumped the same way, and `dump` sends it without stopping:
+
+```php
+$request->message->dd();
+$request->callback_query->message->dump();
+```
+
+Updates without a chat, such as inline queries, are sent to the private chat of the user who caused them. Long updates are split into several messages. To keep the update out of the chat, `log` writes it to your application log instead and carries on:
+
+```php
+$request->log();
+$request->message->from->log();
+```
+
 <a name="retrieving-all-input-data"></a>
 ### Retrieving All Input Data
 
