@@ -159,6 +159,32 @@ php laragram start:apiserver
 
 The command runs the official `telegram-bot-api` binary by default. You may also use the [LaraGram API Server](/v4/apiserver) by setting the `API_BINARY` environment variable to `laragram-server`.
 
+<a name="long-polling"></a>
+### Long Polling
+
+A webhook needs a public HTTPS URL. While developing, or on a server Telegram cannot reach, your bot may fetch its updates with long polling instead. Start the development server with the `--polling` option, and it polls the bot next to serving your web routes:
+
+```shell
+php laragram serve --polling
+```
+
+Or run the poller on its own:
+
+```shell
+php laragram poll
+```
+
+Each update is handled in its own process, exactly like a webhook update. The poller handles up to 10 updates at the same time; pass `--concurrency=1` to handle them one by one, in the order they arrived. The command polls the `default` connection, or every connection when the default is `auto`; pick connections with `--connection` (or `-c`):
+
+```shell
+php laragram poll -c first -c second
+```
+
+Telegram does not deliver updates through `getUpdates` while a webhook is set, so the poller refuses to start for a connection that has one. Run `php laragram webhook:delete` first, or pass `--delete-webhook`. Pass `--drop-pending` to skip the updates that arrived while the bot was offline. When you stop the poller with `Ctrl+C`, it waits for the running updates and confirms them to Telegram, so they are not delivered again.
+
+> [!NOTE]
+> When [Surge](/v4/surge#long-polling) serves your application, start it with `php laragram surge:start --polling` instead: the updates are handed to Surge's workers.
+
 <a name="databases-and-migrations"></a>
 ### Databases and Migrations
 

@@ -119,3 +119,5 @@ Bot::onPhoto(function (Request $request) {
 ## Webhooks
 
 `php laragram webhook:set` registers the connection's `url` and `secret_token`; `webhook:info` shows the current state. Only run webhook commands when the user asks, because they change the live bot. Each webhook update should finish quickly — reply first and queue slow work.
+
+Without a public URL, use long polling: `php laragram serve --polling` (dev server plus poller) or `php laragram poll` (`-c` picks connections, `--concurrency=1` keeps order, `--drop-pending`, `--delete-webhook`). Every update still runs in its own process like a webhook update, and each connection is polled separately with its own bot bound. Under Surge use `surge:start --polling` (or `SURGE_POLLING=true`), which forwards updates to the Surge workers; `poll --forward=URL` does the same for any running server. A connection with a webhook cannot be polled, and polling several bots needs `default` set to `auto`.

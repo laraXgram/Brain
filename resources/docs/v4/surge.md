@@ -516,6 +516,23 @@ return Surge::table('example')->get('uuid');
 > [!WARNING]
 > The column types supported by Swoole tables are: `string`, `int`, and `float`.
 
+<a name="long-polling"></a>
+## Long Polling
+
+Surge may also receive bot updates with long polling instead of a webhook. Start the server with the `--polling` option, or set the `SURGE_POLLING` environment variable to `true`:
+
+```shell
+php laragram surge:start --polling
+```
+
+Surge then runs `php laragram poll --forward` as a [background process](#background-processes). It calls `getUpdates` for every bot connection and posts each update to the Surge server the way Telegram calls a webhook, so the update is handled by your workers (or Swoole's task workers), in a fresh sandbox, on Swoole, RoadRunner, and FrankenPHP alike. With several bots, set the default bot connection to `auto`: forwarded updates carry their connection in a header signed with your application key. The `polling_concurrency` option (`SURGE_POLLING_CONCURRENCY`, 10 by default) limits how many updates are posted at the same time.
+
+You may forward polled updates to any running server yourself, for example one served by Nginx and PHP-FPM:
+
+```shell
+php laragram poll --forward=http://127.0.0.1:8000
+```
+
 <a name="background-processes"></a>
 ## Background Processes
 

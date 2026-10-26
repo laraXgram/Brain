@@ -90,6 +90,10 @@ class PriceFeedListener
 
 Processes are supervised (restarted when they exit, at most once every 5 seconds) and get a freshly booted application. Under RoadRunner and FrankenPHP, Surge starts them through the hidden `surge:process` command with the PHP CLI binary and stops them with the server; `$process` and `$server` are `null` there and `Surge::table()` is unavailable. Handlers run in a Swoole coroutine container when the extension is installed (`Surge::process($handler, $name, coroutine: false)` opts out). `surge:reload` does **not** restart them; restart the server after changing their code. The MTProto pump is registered this way.
 
+## Long Polling
+
+`surge:start --polling` (or `SURGE_POLLING=true`) runs the `bot-poller` background process: it calls `getUpdates` for every connection and POSTs each update to the Surge server, so updates go through workers, task workers, and sandboxes exactly like webhook updates, on every Surge server. Several bots need `bot.default` set to `auto` and an `APP_KEY` (forwarded updates name their connection in a signed header). Tune with `surge.polling_concurrency`. Never set a webhook and poll the same bot.
+
 ## Fast Paths
 
 `Surge::route('GET', '/health', fn (Request $request) => response('ok'))` and `Surge::listen('COMMAND', 'ping', fn (Request $request) => new Response)` bypass the kernel, middleware, and sessions. Use them only for trivial, stateless endpoints.

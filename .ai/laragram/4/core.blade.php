@@ -20,7 +20,7 @@
 
 ## Running the Bot
 
-- Local development: `{{ $assist->commanderCommand('serve') }}` serves the application (default port 9000). Point the webhook at a public tunnel URL with `{{ $assist->commanderCommand('webhook:set') }}` only when the user asks.
+- Local development: `{{ $assist->commanderCommand('serve') }}` serves the application (default port 9000). Point the webhook at a public tunnel URL with `{{ $assist->commanderCommand('webhook:set') }}` only when the user asks, or receive updates without a webhook through long polling: `{{ $assist->commanderCommand('serve --polling') }}` (or `{{ $assist->commanderCommand('poll') }}` alone; `surge:start --polling` under Surge).
 - Production: deploy behind a web server (or LaraGram Surge), run `{{ $assist->commanderCommand('optimize') }}`, and keep queue workers and the scheduler running.
 - A self-hosted Bot API server can be started with `{{ $assist->commanderCommand('start:apiserver') }}` when `api_id` and `api_hash` are configured.
 

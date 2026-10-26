@@ -711,13 +711,16 @@ php laragram webhook:set --connection=first
 php laragram webhook:set --connection=second
 ```
 
+With [long polling](/v4/installation#long-polling) no webhook or secret token is needed: `php laragram poll` polls every connection, each in its own process, and tells LaraGram which bot each update came from.
+
 When the `default` connection is `auto`, LaraGram detects which connection every incoming update belongs to **before** any middleware runs or any listener is matched. The detected connection is bound to that update's request only, so every call you send back uses the correct bot, listeners limited with `forConnections` only match their own bot, and updates of different bots never affect each other—even when a long-running server such as Surge handles many updates in one process.
 
 The connection is detected from, in order:
 
 <div class="content-list" markdown="1">
 
-- The `LARAGRAM_BOT_CONNECTION` server variable, when the web server or the process feeding the update sets it.
+- The `LARAGRAM_BOT_CONNECTION` server variable, when the web server or the process feeding the update sets it. The [`poll`](/v4/installation#long-polling) command sets it for every update it handles.
+- The `X-LaraGram-Bot-Connection` header of an update forwarded by `poll --forward` (as [Surge](/v4/surge#long-polling) does), trusted only with a valid `X-LaraGram-Bot-Signature`, which is signed with your application key.
 - The webhook secret token. A connection with a `secret_token` only claims updates that carry that exact token, and a connection without one only claims updates that carry no token.
 - The webhook `url`. If several connections are still candidates, the update is claimed by the connection whose `url` path (and query string) matches the requested URI—for example `https://example.com/webhook?bot=first` and `https://example.com/webhook?bot=second`.
 
