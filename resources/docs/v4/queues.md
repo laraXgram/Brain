@@ -1697,7 +1697,7 @@ The batch's ID, which may be accessed via the `$batch->id` property, may be used
 <a name="naming-batches"></a>
 #### Naming Batches
 
-Some tools such as LaraGram Horizon and LaraGram Telescope may provide more user-friendly debug information for batches if batches are named. To assign an arbitrary name to a batch, you may call the `name` method while defining the batch:
+[Sentinel](/v4/sentinel#the-queue-pages) shows named batches by their name, which makes them much easier to find. To assign an arbitrary name to a batch, you may call the `name` method while defining the batch:
 
 ```php
 $batch = Bus::batch([
@@ -1993,6 +1993,9 @@ dispatch(function () use ($podcast) {
 
 <a name="running-the-queue-worker"></a>
 ## Running the Queue Worker
+
+> [!NOTE]
+> With a Redis queue, [Sentinel](/v4/sentinel#queues) can run your workers instead: `php laragram sentinel:queue` starts, balances and restarts them, and the dashboard shows every pending, completed and failed job with its metrics.
 
 <a name="the-queue-work-command"></a>
 ### The `queue:work` Command

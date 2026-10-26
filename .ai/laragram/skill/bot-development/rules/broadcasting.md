@@ -10,7 +10,7 @@ Check `bootstrap/app.php` for `withBroadcasting(...)` and the `TrackChats` bot m
 
 - `TrackChats` records chats (with names, language, last activity), group members (senders, joins, leaves, `chat_member` updates), and marks chats unreachable when the bot is blocked or removed. If a connection sets `allowed_updates`, it must include `my_chat_member` (and `chat_member` to record channel joins; the bot must be an admin).
 - Chats, members and recall data live in the broadcast store (`broadcasting.store`): `database` (three tables; best for large audiences and many filters), `redis` (no tables, filtered in memory), or `null`. Read or write it from code with `Broadcast::store()`.
-- A queue worker must run (`php laragram queue:work`). Progress, cancellation and `once()` use the cache, so workers need a shared store (redis or database).
+- A queue worker must run (`php laragram queue:work`, or `php laragram sentinel:queue` when Sentinel runs a Redis queue). Progress, cancellation and `once()` use the cache, so workers need a shared store (redis or database).
 
 ## The Three Objects
 

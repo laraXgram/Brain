@@ -13,7 +13,7 @@ A production LaraGram application has up to four long-lived parts. Identify whic
 | Part | Needed when | Runs as |
 | --- | --- | --- |
 | HTTP entry (`public/index.php` or Surge) | Always (webhook updates, web routes, Mini Apps) | Nginx + PHP-FPM, or `php laragram surge:start` |
-| Queue workers | The app dispatches jobs or queued listeners | `php laragram queue:work` under a supervisor |
+| Queue workers | The app dispatches jobs or queued listeners | `php laragram queue:work` (or `sentinel:queue` with Sentinel and Redis) under a supervisor |
 | Scheduler | `listens/console.php` or providers schedule tasks | `php laragram schedule:run` every minute (cron) or `schedule:work` |
 | MTProto sessions | `laraxgram/mtproto` is installed and sessions are authorized | Inside Surge automatically, or `php laragram client:start` under a supervisor |
 
