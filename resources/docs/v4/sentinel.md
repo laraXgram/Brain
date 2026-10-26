@@ -20,6 +20,7 @@
     - [Listeners and Conversations](#listeners-and-conversations)
     - [API Calls](#api-calls)
     - [Servers and Network](#servers-and-network)
+    - [API Server](#api-server)
 - [Queues](#queues)
     - [Running the Queue Supervisor](#running-the-queue-supervisor)
     - [Supervisors and Balancing](#supervisors-and-balancing)
@@ -274,6 +275,19 @@ Volume, latency and errors grouped by method and error code, plus the **flood wa
 ### Servers and Network
 
 CPU, memory and disk of every server running `sentinel:check`, the latency of the Telegram API, and the health of the [proxy pool](/v4/requests#proxy-pool).
+
+<a name="api-server"></a>
+### API Server
+
+When your bots talk to a local Bot API server — the official `telegram-bot-api` or the [LaraGram API Server](/v4/apiserver) — started with a [statistics port](/v4/apiserver#statistics), the **API Server** page shows what it reports: bots and active bots, requests, updates and errors per second over the last 5 seconds, minute and hour, active requests and webhook connections, CPU and memory, and every bot with its delivery method and pending updates. Bot tokens are masked, and each bot is matched to its bot connection.
+
+Sentinel reads the address from the `stat` option of `api_server` in `config/bot.php`. Point it elsewhere, for example at a server on another machine, with:
+
+```ini
+SENTINEL_API_SERVER_STATS_URL=http://10.0.0.5:8082
+```
+
+`sentinel:check` records the statistics with each webhook snapshot, so traffic, CPU, memory and per-bot updates are charted over the selected period, and the last snapshot stays visible while the server is unreachable.
 
 <a name="queues"></a>
 ## Queues

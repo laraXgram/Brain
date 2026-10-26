@@ -1,6 +1,6 @@
 ---
 name: sentinel-debugging
-description: "Debugs and monitors a LaraGram bot with laraxgram/sentinel. Activate when the user reports that the bot misbehaved, failed, or was slow in production; when asked why an update was not handled, which Bot API calls an update made, why Telegram returned an error or a flood wait, who blocked the bot, whether the webhook is healthy, or which commands have no handler; when reading the Sentinel dashboard, replaying or composing updates in the playground; and when changing config/sentinel.php - watchers, sampling, retention, filters, tags, hidden fields, alerts, dashboard logins, sentinel:install / check / prune / clear / pause / resume."
+description: "Debugs and monitors a LaraGram bot with laraxgram/sentinel. Activate when the user reports that the bot misbehaved, failed, or was slow in production; when asked why an update was not handled, which Bot API calls an update made, why Telegram returned an error or a flood wait, who blocked the bot, whether the webhook is healthy, how the local Bot API server is doing, or which commands have no handler; when reading the Sentinel dashboard, replaying or composing updates in the playground; and when changing config/sentinel.php - watchers, sampling, retention, filters, tags, hidden fields, alerts, dashboard logins, sentinel:install / check / prune / clear / pause / resume."
 license: MIT
 metadata:
   author: laraxgram
@@ -25,6 +25,7 @@ Sentinel is the bot's recorder: every update it handled, with the Bot API calls,
 4. For "the bot did nothing", check `unhandled` first, then the listens page (a listen with zero hits is usually ordered after a broader one), then the conversation funnel if a flow is involved.
 5. To reproduce, replay the recorded update in **dry** mode, or compose one in the playground; the dashboard then shows exactly which calls your current code makes.
 6. When the dashboard is missing webhook history, server charts or alerts, `sentinel:check` is not running — say so instead of hunting for a bug.
+7. With a local Bot API server, open the **API Server** page (its `--http-stat-port` statistics: requests, updates and errors per second, pending updates per bot, CPU, memory) before blaming Telegram for slow or missing updates. It reads `bot.api_server.stat` or `SENTINEL_API_SERVER_STATS_URL`; never paste the raw statistics page anywhere, it contains bot tokens.
 
 ## What to Change, and Where
 

@@ -335,6 +335,8 @@ The statistics are then available at `http://127.0.0.1:8082`. You may append `?i
 > [!WARNING]
 > The statistics page lists the tokens of your bots. Bind it to a private address and never expose it publicly.
 
+[Sentinel](/v4/sentinel#api-server) reads this page for you: its **API Server** page shows the live figures with masked tokens, and `sentinel:check` records them so traffic, CPU and memory can be charted over time. This works with the official `telegram-bot-api` server too.
+
 <a name="logging"></a>
 ## Logging
 
