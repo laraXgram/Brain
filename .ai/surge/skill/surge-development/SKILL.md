@@ -26,7 +26,7 @@ Surge boots the application once per worker and keeps it in memory: service prov
 | Web requests and bot updates | Yes | Yes |
 | Task-worker bot updates, `Surge::concurrently()`, ticks | Yes | No |
 | `Surge::table()`, the `surge` cache store, cache intervals | Yes | No |
-| `Surge::process()` background processes (MTProto pump) | Yes | No |
+| `Surge::process()` background processes (MTProto pump) | Yes (forked by the server) | Yes (run with the PHP CLI binary, no `$process` / `$server`) |
 
 Guard Swoole-only code (`extension_loaded('swoole') || extension_loaded('openswoole')`, or `config('surge.server')`) when the project may run on other servers.
 
@@ -88,7 +88,7 @@ class PriceFeedListener
 }
 ```
 
-Processes are supervised (restarted with backoff when they exit) and get a freshly booted application. `surge:reload` does **not** restart them; restart the server after changing their code. The MTProto pump is registered this way.
+Processes are supervised (restarted when they exit, at most once every 5 seconds) and get a freshly booted application. Under RoadRunner and FrankenPHP, Surge starts them through the hidden `surge:process` command with the PHP CLI binary and stops them with the server; `$process` and `$server` are `null` there and `Surge::table()` is unavailable. Handlers run in a Swoole coroutine container when the extension is installed (`Surge::process($handler, $name, coroutine: false)` opts out). `surge:reload` does **not** restart them; restart the server after changing their code. The MTProto pump is registered this way.
 
 ## Fast Paths
 

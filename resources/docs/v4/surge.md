@@ -61,6 +61,23 @@ php laragram surge:start
 
 Surge supports RoadRunner 2023.3 and newer, including the RoadRunner 3.x releases. If you already have a RoadRunner binary installed on your system, Surge will use it instead of downloading one. If GitHub is not reachable from your server, you may download the binary through a proxy by setting the `SURGE_GITHUB_PROXY_PREFIX` environment variable to the proxy's URL prefix.
 
+<a name="frankenphp"></a>
+### FrankenPHP
+
+[FrankenPHP](https://frankenphp.dev) is a PHP application server, written in Go, built on top of the [Caddy](https://caddyserver.com) web server. When you install Surge for FrankenPHP, or start a FrankenPHP based Surge server without a FrankenPHP binary, Surge will offer to download the FrankenPHP binary for your operating system and place it in your application's root directory, along with the `public/frankenphp-worker.php` worker script:
+
+```shell
+php laragram surge:install --server=frankenphp
+
+php laragram surge:start
+```
+
+Surge supports FrankenPHP 1.5 and newer. Because FrankenPHP is built on Caddy, it can serve your application over HTTPS, HTTP/2, and HTTP/3 and obtain and renew the certificates for you when you pass the `--https` option:
+
+```shell
+php laragram surge:start --server=frankenphp --https --port=443
+```
+
 <a name="swoole-configuration"></a>
 #### Swoole Configuration
 
@@ -498,3 +515,47 @@ return Surge::table('example')->get('uuid');
 
 > [!WARNING]
 > The column types supported by Swoole tables are: `string`, `int`, and `float`.
+
+<a name="background-processes"></a>
+## Background Processes
+
+Surge may supervise long-lived background processes next to your workers, which is ideal for persistent listeners such as the [MTProto](/v4/mtproto-configuration#surge-pump) update pump. Register a process from the `boot` method of one of your service providers by giving the `process` method an invokable class and, optionally, a name:
+
+```php
+use App\Processes\PriceFeed;
+use LaraGram\Surge\Facades\Surge;
+
+public function boot(): void
+{
+    Surge::process(PriceFeed::class, 'price-feed');
+}
+```
+
+Each process runs in its own process with its own freshly-booted application instance, which is passed to the `__invoke` method. The handler should be long-lived: when it returns or crashes, Surge starts it again, waiting until at least five seconds have passed since the previous start so that a failing handler does not restart in a tight loop:
+
+```php
+namespace App\Processes;
+
+use LaraGram\Contracts\Foundation\Application;
+
+class PriceFeed
+{
+    public function __invoke(Application $app): void
+    {
+        while (true) {
+            // ...
+        }
+    }
+}
+```
+
+Background processes run on every Surge server:
+
+- **Swoole** forks each process from the server itself, so the handler also receives the `Swoole\Process` and the `Swoole\Http\Server` instances as its second and third arguments.
+- **RoadRunner** and **FrankenPHP** start each process with the PHP CLI binary (through the hidden `surge:process` command) and stop them together with the server. The handler receives no process or server instance, and features that rely on the Swoole server, such as [tables](#tables), are not available inside it. Their output is written to the `surge:start` console.
+
+By default the handler runs inside a Swoole coroutine container when the Swoole extension is installed, so it may use coroutines on any server. Pass `false` as the third argument to run it as plain PHP:
+
+```php
+Surge::process(PriceFeed::class, 'price-feed', coroutine: false);
+```

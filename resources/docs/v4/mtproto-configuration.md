@@ -276,6 +276,8 @@ php laragram surge:start
 
 Set `autostart` to `false` to opt out (for example to run the pump via `client:start` instead). The `sessions` list controls which sessions the pump boots — one reader coroutine each, on one shared runtime. Only already-authorized sessions start; there is no interactive login inside a server.
 
+The pump is a Surge [background process](/v4/surge#background-processes), so it runs on every Surge server — Swoole, RoadRunner, and FrankenPHP. Under RoadRunner and FrankenPHP, Surge starts it with the PHP CLI binary next to the server, so that binary needs the `swoole` (or `openswoole`) extension; FrankenPHP's own embedded PHP does not. The HTTP workers never open their own connection: `Client` calls made while handling a request are forwarded to the pump over its local socket (the `rpc` options). Shared Swoole tables only exist on the Swoole server, so under RoadRunner and FrankenPHP the `swoole-table` stores live in the pump's memory and are lost when it restarts; prefer the `file`, `redis`, or `database` store drivers there.
+
 <a name="client-start"></a>
 ### The client:start Command
 

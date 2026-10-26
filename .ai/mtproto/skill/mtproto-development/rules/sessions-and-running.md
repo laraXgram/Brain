@@ -52,7 +52,7 @@ These are interactive and act on real accounts. Tell the user which command to r
 
 ## Running Sessions
 
-- **With Surge (production):** `php laragram surge:start` starts the MTProto pump as a Surge process for every authorized session (`mtproto.surge.autostart`, `mtproto.surge.sessions`). There is no interactive login inside the server; unauthorized sessions are skipped and re-checked every `session_check_interval` seconds.
+- **With Surge (production):** `php laragram surge:start` starts the MTProto pump as a Surge process for every authorized session (`mtproto.surge.autostart`, `mtproto.surge.sessions`). There is no interactive login inside the server; unauthorized sessions are skipped and re-checked every `session_check_interval` seconds. This works on every Surge server: under RoadRunner and FrankenPHP the pump is a separate CLI process, so the CLI PHP needs the `swoole` extension, and `swoole-table` stores are then local to the pump (lost when it restarts), so prefer `file`, `redis`, or `database` stores there.
 - **Standalone:** `php laragram client:start`, `--session=default,support`, or `--all`. It blocks and requires the `swoole` driver. Keep it running under a process supervisor, and set `mtproto.surge.autostart` to `false` if Surge runs too.
 - **Driver and pump:** non-blocking concurrent handlers need `driver => 'swoole'` and `use_pump => true`; the `sync` driver handles one update at a time.
 - **Isolation:** `mtproto.surge.isolation` is `concurrent` (updates run concurrently, application state is flushed when idle) or `sandbox` (one update at a time, each in a fresh application sandbox like Surge requests). Choose `sandbox` when handlers rely on per-update singletons, auth, or scoped state.
