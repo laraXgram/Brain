@@ -149,18 +149,30 @@ LaraGram provides global helpers that read the common parts of any update, whate
 | Helper | Returns |
 | --- | --- |
 | `chat()` | The chat the update happened in. |
-| `user()` | The user who caused the update. `null` for channel posts and anonymous reactions or poll votes. |
+| `user()` | The user who caused the update. Empty for channel posts and anonymous reactions or poll votes. |
 | `sender()` | The actual sender: a user, or the chat a message was sent on behalf of. |
-| `message()` | The message of the update. For a callback query, the message its button is attached to, which is `null` for inline-mode messages. |
+| `message()` | The message of the update. For a callback query, the message its button is attached to, which is empty for inline-mode messages. |
 | `text()` | The text of the message, or the caption of a media message. |
 | `bot_connection()` | The name of the bot connection handling the update. |
 
 </div>
 
-Each helper returns `null` when the current update does not carry that value, so fields Telegram marks as optional never cause an error:
+The helpers, like every update field, return typed objects (`chat()` is a `Chat`, `message()->from` a `User`). When the update does not carry a value, you get an empty object of that type instead of `null`, so chains and helper methods never cause an error, whatever the update:
 
 ```php
-$request->sendMessage(chat()->id, 'Hello '.(user()?->first_name ?? 'there'));
+$request->sendMessage(chat()->id, 'Hello '.(user()->first_name ?? 'there'));
+
+if (message()->reply_to_message->isEmpty()) {
+    // Not a reply, or not a message at all...
+}
+```
+
+Its fields read as `null`, and `isset`, `empty`, `??`, `filled` and `blank` treat it as missing, so test for a value with them rather than with `=== null`:
+
+```php
+if (filled(callback_query())) {
+    // A button was pressed...
+}
 ```
 
 A message may be sent on behalf of a chat: a post in a channel, a message from an anonymous group admin, or a channel post automatically forwarded to its discussion group. Telegram then puts the real sender in `sender_chat`, leaves `from` empty in channels, and fills `from` with a placeholder user in groups. The `sender` helper returns the sender chat for these messages, as well as the `actor_chat` of an anonymous reaction and the `voter_chat` of an anonymous poll vote:
@@ -419,6 +431,8 @@ count($message);
 ```
 
 An update object is countable, iterable, may be read as an array (`$message['text']`), and serializes back to exactly what Telegram expects with `toArray` and `toJson`.
+
+A field that is an object but is missing from the payload reads as an empty object of its type, so `$message->reply_to_message->has('text')` or `->isEmpty()` never fail. `isset($message->reply_to_message)` stays `false`, and the empty object serializes as `null`. Lists and plain values that are missing stay `null`.
 
 <a name="request-mode"></a>
 ### Request mode

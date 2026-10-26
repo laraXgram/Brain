@@ -29,7 +29,7 @@ Use the global helpers for the common parts of any update. They work across mess
 | `text()` | The message text, or the caption of a media message |
 | `bot_connection()` | The bot connection handling the update |
 
-These helpers read the update currently being handled. They return `null` in jobs, commands, and scheduled tasks — pass ids explicitly there. Fields Telegram marks optional are `null` when absent, so use `user()?->id` in code that can run for channel posts. A message sent on behalf of a chat in a group (an anonymous admin, a linked channel) carries a placeholder `from` user, so use `sender()` to identify who sent it.
+These helpers read the update currently being handled and return typed objects (`Chat`, `User`, `Message`). A part the update does not carry is an empty object of its type, never `null`, so chains such as `message()->reply_to_message->isEmpty()` or `user()->id ?? null` never fail; test presence with `isset()`, `filled()` / `blank()` or `??`, never with `=== null`. In jobs, commands, and scheduled tasks there is no update, so they are empty — pass ids explicitly there. A message sent on behalf of a chat in a group (an anonymous admin, a linked channel) carries a placeholder `from` user, so use `sender()` to identify who sent it.
 
 `$request->scope()` returns the chat type (`private`, `group`, `supergroup`, `channel`) and `$request->listenIs('orders.*')` checks the matched listen name.
 
