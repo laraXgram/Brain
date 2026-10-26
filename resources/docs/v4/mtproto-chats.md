@@ -147,6 +147,27 @@ $request->setChatPhoto(peer: '@group', path: '/path/to/photo.jpg');
 $request->deleteChatPhoto(peer: '@group');
 $request->blockUser(peer: '@spammer');
 $request->unblockUser(peer: '@spammer');
+
+// What members may NOT do by default (the same names as restrictChatMember)
+$request->setChatPermissions(peer: '@group', restrictions: ['send_media', 'send_polls']);
+$request->setSlowMode(peer: '@group', seconds: 30);       // 0 turns slow mode off
+$request->setChatProtectedContent(peer: '@channel');     // no forwarding or saving
+
+// Hand a group or channel you own to someone else (needs your 2FA password)
+$request->transferChatOwnership(peer: '@channel', user: '@heir', password: 'my 2FA password');
+```
+
+Archive and mute chats, or get the public link of a supergroup or channel message:
+
+```php
+$request->archiveChats(peers: ['@news', '@offtopic']);
+$request->unarchiveChats(peers: '@news');
+
+$request->muteChat(peer: '@noisy');                       // forever
+$request->muteChat(peer: '@noisy', until: now()->addHours(8)->timestamp);
+$request->unmuteChat(peer: '@noisy');
+
+$link = $request->getMessageLink(peer: '@channel', msgId: 42); // https://t.me/channel/42
 ```
 
 <a name="invite-links"></a>

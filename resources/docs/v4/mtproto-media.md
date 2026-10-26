@@ -69,6 +69,20 @@ $request->sendAudio(peer: $chatId, path: '/path/to/song.mp3');
 $request->sendVoice(peer: $chatId, path: '/path/to/note.ogg');
 ```
 
+<a name="stickers-animations-video-notes"></a>
+### Stickers, Animations & Video Notes
+
+```php
+// .webp, animated .tgs or video .webm; `emoji` is the sticker's alt emoji
+$request->sendSticker(peer: $chatId, path: '/path/to/sticker.webp', params: ['emoji' => '😀']);
+
+// A GIF or a silent MP4, shown as an autoplaying animation
+$request->sendAnimation(peer: $chatId, path: '/path/to/funny.mp4', message: 'lol');
+
+// A round video message: a square MP4, `length` is its side in pixels
+$request->sendVideoNote(peer: $chatId, path: '/path/to/round.mp4', params: ['length' => 384, 'duration' => 12]);
+```
+
 <a name="other-media"></a>
 ### Location, Venue, Contact & Dice
 

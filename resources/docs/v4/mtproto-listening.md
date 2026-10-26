@@ -180,6 +180,10 @@ Client::onReadHistory($action);              // Read receipts
 Client::onStory($action);                    // New/updated stories
 Client::onStoryReaction($action);
 Client::onStarsBalance($action);             // Stars balance changes
+Client::onWalletState($action);              // TON wallet created or balance changed
+Client::onWalletTransaction($action);        // A wallet transfer was sent
+Client::onTonConnectSession($action);        // A dapp connected over TON Connect
+Client::onTonConnectDisconnect($action);     // TON Connect sessions about to close
 Client::onEncryptedMessage($action);         // Secret-chat messages
 Client::onEncryption($action);               // Secret-chat state
 Client::onBusinessMessage($action);          // Telegram Business messages

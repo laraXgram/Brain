@@ -9,6 +9,10 @@
 - [Stars & Gifts](#stars-gifts)
 - [Ephemeral Messages](#ephemeral-messages)
 - [Bot Controls](#bot-controls)
+- [Using Other Bots](#using-other-bots)
+- [Wallet & TON Connect](#wallet-ton-connect)
+- [Share Themes](#share-themes)
+- [Password-Protected Methods](#password-protected-methods)
 - [Business Messages](#business-messages)
 
 <a name="introduction"></a>
@@ -147,6 +151,16 @@ $request->transferStarGift(gift: $giftId, to: '@friend');
 $request->sendPaidReaction(peer: '@channel', msgId: 500, count: 5);
 ```
 
+A gift is addressed by the id of the message that delivered it, a collectible's slug, or a raw `InputSavedStarGift`. Collectibles can leave Telegram as TON NFTs; withdrawing needs the account's [2FA password](#password-protected-methods):
+
+```php
+$request->withdrawStarGift(gift: 'PlushPepe-42', password: 'my 2FA password', keepOnProfile: true);
+$url = $request->getStarGiftWithdrawalUrl(gift: 'PlushPepe-42', password: 'my 2FA password');
+$request->deleteStarGift(gift: $giftId);
+
+$rates = $request->getCurrencyRates(); // ['USD' => 0.013, 'TON' => ..., ...]
+```
+
 <a name="ephemeral-messages"></a>
 ## Ephemeral Messages
 
@@ -174,9 +188,90 @@ $request->setBotCommands(
 $request->setBotMenuButton(user: '@user', button: 'commands');
 $request->setBotInfo(params: ['name' => 'My Bot', 'about' => 'Built with LaraGram']);
 $request->setDefaultAdminRights(rights: ['delete_messages' => true]);
+
+// Additional (collectible) usernames of a bot you own
+$request->checkBotUsername(username: 'shop_helper_bot', additional: true);
+$request->addBotUsername(bot: '@shop_bot', username: 'shop_helper_bot');
+$request->removeBotUsername(bot: '@shop_bot', username: 'shop_helper_bot');
+
+// Verifier bots: verify a peer with a custom description, or remove it
+$request->setCustomVerification(peer: '@partner_channel', description: 'Official partner');
+$request->setCustomVerification(peer: '@partner_channel', enabled: false);
 ```
 
 Answer callback and inline queries with [`answerCallback` / `answerInlineQuery`](/v4/mtproto-requests#answering-queries).
+
+<a name="using-other-bots"></a>
+## Using Other Bots
+
+A user session can use other bots like a person would: query them inline and press their inline buttons.
+
+```php
+// Type "@gif cats" in a chat and send the first result
+$request->sendInlineQuery(peer: $chatId, bot: '@gif', query: 'cats');
+
+// Or pick a result yourself
+$results = $request->inlineQuery(bot: '@gif', query: 'cats', peer: $chatId);
+$request->sendInlineResult(peer: $chatId, queryId: $results['query_id'], resultId: $results['results'][2]['id']);
+
+// Press an inline button: pass its callback data
+$answer = $request->getCallbackAnswer(peer: '@shop_bot', msgId: 120, data: 'buy:42');
+$answer['message'] ?? null; // the bot's toast or alert text
+```
+
+Buttons that ask for the account password, such as a bot ownership transfer, take it as `password:`. To start a bot with a deep-link parameter, call the raw method: `$request->startBot(bot: '@shop_bot', peer: '@shop_bot', start_param: 'ref42')`.
+
+<a name="wallet-ton-connect"></a>
+## Wallet & TON Connect
+
+The account's built-in TON wallet is available on the client. Amounts are in nanotons:
+
+```php
+$wallet = $request->getWallet(); // walletState, or walletStateEmpty when there is none
+
+foreach ($request->iterateWalletTransactions(limit: 100, direction: 'in') as $transaction) {
+    // $transaction['amount'], $transaction['peer'], $transaction['comment'] ...
+}
+
+$nfts      = $request->getWalletNfts();
+$addresses = $request->getWalletAddresses(users: ['@alice', '@bob']);
+
+// Connected dapps
+foreach ($request->getTonConnectSessions() as $session) {
+    $request->closeTonConnectSession(sessionId: $session['id']);
+}
+
+// The toncenter HTTP API, proxied through Telegram; the JSON response is decoded
+$balance = $request->toncenter('getAddressBalance', query: ['address' => $wallet['address']]);
+```
+
+Listen for wallet changes with `Client::onWalletState()`, `onWalletTransaction()`, `onTonConnectSession()` and `onTonConnectDisconnect()`. Every other `wallet.*` method (backups, secret phrase export, TON Connect requests) is on the [namespaced API](/v4/mtproto-requests#the-namespaced-api), for example `$request->wallet->getGaslessInfo()`.
+
+<a name="share-themes"></a>
+## Share Themes
+
+Choose how a profile looks when it is shared: a backdrop with an emoji pattern, a collectible gift, or the default:
+
+```php
+$backdrops = $request->messages->getShareThemeBackdrops(hash: 0);
+
+$request->setShareThemeBackdrop(peer: 'me', backdropId: $backdrops['backdrops'][0]['backdrop_id'], emojis: ['🔥', '✨']);
+$request->setShareThemeGift(peer: 'me', gift: 'PlushPepe-42');
+$request->resetShareTheme(peer: 'me');
+```
+
+<a name="password-protected-methods"></a>
+## Password-Protected Methods
+
+Some methods require the account's two-step verification password. The helpers above take it as `password:` and build the proof for you; for raw calls, build it yourself:
+
+```php
+// inputCheckPasswordSRP, for methods with a `password` parameter
+$request->invoke('wallet.exportSecretPhrase', ['password' => $request->passwordCheck('my 2FA password')]);
+
+// A temporary password, for methods with a `tmp_password` parameter
+$tmp = $request->tmpPassword('my 2FA password', period: 60);
+```
 
 <a name="business-messages"></a>
 ## Business Messages

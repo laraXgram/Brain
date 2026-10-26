@@ -37,7 +37,7 @@ $request->setChatDescription(peer: '@group', about: 'A fresh description.');
 $request->setChatPhoto(peer: '@group', path: storage_path('app/group.jpg'));
 ```
 
-Also available: `addChatMembers`, `joinChat`, `leaveChat`, `deleteChat`, `blockUser` / `unblockUser`.
+Also available: `addChatMembers`, `joinChat`, `leaveChat`, `deleteChat`, `blockUser` / `unblockUser`, `setChatPermissions(peer:, restrictions: [...])` (default member restrictions, same names as `restrictChatMember`), `setSlowMode(peer:, seconds:)`, `setChatProtectedContent(peer:)`, `transferChatOwnership(peer:, user:, password:)` (2FA password), `archiveChats` / `unarchiveChats`, `muteChat(peer:, until:)` / `unmuteChat`, and `getMessageLink(peer:, msgId:)` for supergroups and channels.
 
 ## Invite Links, Pins and Forum Topics
 
@@ -90,8 +90,14 @@ Secret chats are bound to the session that created them; deleting or re-authenti
 
 ## Stars, Gifts and Paid Features
 
-`getStarsStatus(peer: 'me')`, `getStarGifts()`, `saveStarGift`, `convertStarGift`, `transferStarGift(gift:, to:)`, and `sendPaidReaction(peer:, msgId:, count:)`. These spend or move real value: never call them without explicit user intent.
+`getStarsStatus(peer: 'me')`, `getStarGifts()`, `saveStarGift`, `convertStarGift`, `transferStarGift(gift:, to:)`, `withdrawStarGift(gift:, password:)` / `getStarGiftWithdrawalUrl` (collectible to TON NFT, 2FA password), `deleteStarGift`, `getCurrencyRates()`, and `sendPaidReaction(peer:, msgId:, count:)`. A gift is a message id, a collectible slug, or an `InputSavedStarGift`. These spend or move real value: never call them without explicit user intent.
+
+## Wallet, Share Themes and Passwords (layer 232)
+
+- TON wallet: `getWallet()`, `iterateWalletTransactions(limit:, direction: 'in'|'out')`, `getWalletNfts()`, `getWalletAddresses(users: [...])`, `getTonConnectSessions()` / `closeTonConnectSession(sessionId:)`, `toncenter($endpoint, query: [...])` (decoded JSON). Other `wallet.*` calls go through `$request->wallet->...`. Never export secret phrases or send transfers without explicit user intent.
+- Share themes: `setShareThemeBackdrop(peer:, backdropId:, emojis: [...])` (backdrops from `$request->messages->getShareThemeBackdrops(hash: 0)`), `setShareThemeGift(peer:, gift:)`, `resetShareTheme(peer:)`.
+- 2FA: helpers that need the password take `password:`; for raw calls use `passwordCheck($password)` (an `inputCheckPasswordSRP`) or `tmpPassword($password)` (for `tmp_password`). Never hard-code the password; read it from config or the user.
 
 ## Bot Controls and Business Messages
 
-For bot sessions: `setBotCommands(commands: [...])`, `setBotMenuButton`, `setBotInfo(params: [...])`, `setDefaultAdminRights`. For Telegram Business connections, handle `Client::onBusinessMessage` and `Client::onBusinessConnect`. Ephemeral messages: `sendEphemeral`, `editEphemeral`, `deleteEphemeral`.
+For bot sessions: `setBotCommands(commands: [...])`, `setBotMenuButton`, `setBotInfo(params: [...])`, `setDefaultAdminRights`, extra usernames (`checkBotUsername(username:, additional: true)`, `addBotUsername(bot:, username:)`, `removeBotUsername`), and verifier bots' `setCustomVerification(peer:, description:)` / `enabled: false`. From a user session, use other bots with `sendInlineQuery(peer:, bot:, query:)` (or `inlineQuery` + `sendInlineResult`) and press inline buttons with `getCallbackAnswer(peer:, msgId:, data:)`; start one with the raw `startBot(bot:, peer:, start_param:)`. For Telegram Business connections, handle `Client::onBusinessMessage` and `Client::onBusinessConnect`. Ephemeral messages: `sendEphemeral`, `editEphemeral`, `deleteEphemeral`.

@@ -46,7 +46,7 @@ Client::onPhoto(function (ClientRequest $request) {
 | Queries | `onCallbackQuery`, `onCallbackQueryData`, `onInlineQuery`, `onChosenInlineResult`, `onPreCheckoutQuery`, `onShippingQuery` |
 | Chats | `onChat`, `onChannel`, `onChatParticipant`, `onChatParticipantAdd`, `onChatParticipantDelete`, `onChatParticipantAdmin`, `onChatJoinRequest`, `onChatBoost`, `onForumTopic` |
 | Users and activity | `onUserStatus`, `onUserName`, `onUserPhone`, `onTyping`, `onReadHistory`, `onReactions`, `onPollVote`, `onPollResults` |
-| Other | `onStory`, `onStarsBalance`, `onEncryptedMessage`, `onEncryption`, `onBusinessMessage`, `onBusinessConnect`, `onDraft`, `onPhoneCall`, `onGroupCall`, `onUpdate` (any update), `fallback` |
+| Other | `onStory`, `onStarsBalance`, `onWalletState`, `onWalletTransaction`, `onTonConnectSession`, `onTonConnectDisconnect`, `onEncryptedMessage`, `onEncryption`, `onBusinessMessage`, `onBusinessConnect`, `onDraft`, `onPhoneCall`, `onGroupCall`, `onUpdate` (any update), `fallback` |
 
 Many more update verbs exist; check the facade's docblock (`vendor/laraxgram/mtproto/src/Facades/Client.php`) before inventing a generic `onUpdate` handler that branches on `$request->type()`.
 

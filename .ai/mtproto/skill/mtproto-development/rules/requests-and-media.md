@@ -79,6 +79,9 @@ $request->sendPhoto(peer: $chatId, path: storage_path('app/banner.jpg'), message
 $request->sendDocument(peer: $chatId, path: storage_path('app/report.pdf'), message: 'Quarterly report');
 $request->sendVideo(peer: $chatId, path: $video);
 $request->sendVoice(peer: $chatId, path: $voice);
+$request->sendSticker(peer: $chatId, path: $webp, params: ['emoji' => '😀']); // .webp / .tgs / .webm
+$request->sendAnimation(peer: $chatId, path: $gifOrMp4);
+$request->sendVideoNote(peer: $chatId, path: $squareMp4, params: ['length' => 384]);
 $request->sendLocation(peer: $chatId, lat: 35.6892, long: 51.3890);
 $request->sendPoll(peer: $chatId, question: 'Pick one', answers: ['A', 'B']);
 
