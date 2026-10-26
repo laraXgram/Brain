@@ -174,7 +174,7 @@ Or run the poller on its own:
 php laragram poll
 ```
 
-Each update is handled in its own process, exactly like a webhook update. The poller handles up to 10 updates at the same time; pass `--concurrency=1` to handle them one by one, in the order they arrived. The command polls the `default` connection, or every connection when the default is `auto`; pick connections with `--connection` (or `-c`):
+Each update is handled in its own background process, exactly like a webhook update, and the poller never waits for it: the next `getUpdates` call is already in flight while your handlers run. The poller handles up to 10 updates at the same time; pass `--concurrency=1` to handle them one by one, in the order they arrived. The command polls the `default` connection, or every connection when the default is `auto`; pick connections with `--connection` (or `-c`):
 
 ```shell
 php laragram poll -c first -c second
