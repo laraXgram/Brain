@@ -101,6 +101,8 @@ bootstrapTelegram()
 createLunaApp({ /* resolve, setup */ })
 ```
 
+Options worth knowing: `fullscreen: 'mobile'` opens fullscreen on Android and iOS only (keep content clear of Telegram's floating buttons with the `--tg-content-safe-area-inset-*` and `--tg-safe-area-inset-*` variables), and `backButton: { canGoBack, onBack }` sets when the native BackButton shows and what a tap does. While the BackButton is hidden, Android's back gesture closes or minimizes the Mini App instead of going back, so show it on every page the user should be able to leave by gesture.
+
 Options worth knowing:
 
 - `fullscreen: true | 'mobile'` requests fullscreen on launch (`'mobile'` = Android and iOS only, Bot API 8.0+). Telegram's buttons then float over the page, so pad the top with `--tg-safe-area-inset-top` plus `--tg-content-safe-area-inset-top`. Prefer this over calling `telegramRequestFullscreen()` on mount.

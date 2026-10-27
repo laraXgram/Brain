@@ -119,6 +119,25 @@ use App\Middleware\EnsureTokenIsValid;
 
 The `$middleware` object provided to the `withMiddleware` closure is an instance of `LaraGram\Foundation\Configuration\Middleware` and is responsible for managing the middleware assigned to your application's listens. The `append` method adds the middleware to the end of the list of global middleware. If you would like to add a middleware to the beginning of the list, you should use the `prepend` method.
 
+<a name="handling-duplicate-updates"></a>
+#### Handling Duplicate Updates
+
+Telegram delivers an update again when your webhook answers too slowly or with an error, and `getUpdates` does when the update was not confirmed. To handle every update only once, enable the `IgnoreDuplicateUpdates` global middleware:
+
+```php
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->deduplicateUpdates();
+})
+```
+
+The middleware claims each update id once per bot connection in your cache and skips the updates it has already seen, dispatching a `LaraGram\Foundation\Bot\Events\DuplicateUpdateSkipped` event for each. It is disabled by default. Pick the cache store, and how long an id stays claimed (a day by default, the longest Telegram keeps an update), with the method's arguments:
+
+```php
+$middleware->deduplicateUpdates(store: 'redis', ttl: 3600);
+```
+
+Use a store every server shares, such as Redis or your database, when several servers handle updates. Replays and simulations (Sentinel's playground, the MCP update simulator) set the `LARAGRAM_ALLOW_DUPLICATE` server variable to be let through.
+
 <a name="manually-managing-laragrams-default-global-middleware"></a>
 #### Manually Managing LaraGram's Default Global Middleware
 
