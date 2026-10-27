@@ -78,10 +78,12 @@ The `chat_id` input is optional. if not defined, it will default to the `chat_id
 The `@reply` directive is a shortcut for `@reply_parameters`. It takes the id of the message to reply to first, followed by any other [reply parameters](https://core.telegram.org/bots/api#replyparameters), positional or named:
 
 ```blade
-@reply(message()->message_id)
+@reply($messageId)
 
 @reply($messageId, allow_sending_without_reply: true, quote: 'the quoted part')
 ```
+
+Without arguments, `@reply()` replies to the message of the current update (and does nothing when the update carries no message). Without the directive, the message is not sent as a reply.
 
 > [!TIP]
 > Templates can also be sent to many chats at once with [Telegram broadcasts](/v4/broadcasting#templates): `Broadcast::users()->template('welcome')->queue()` renders the template (file, inline, rich message, components…) for every recipient, with `chat()` and `user()` pointing to that recipient.

@@ -36,7 +36,7 @@ Nested templates use dot notation (`orders.summary` → `app/templates/orders/su
 
 ## Inputs and the Method
 
-- Every Bot API parameter can be written as a directive: `@text() ... @endText`, `@caption`, `@parse_mode(markdown)`, `@chat_id($chatId)`, `@reply_markup($markup)`, and so on. `@reply($messageId, quote: '...')` is the shortcut for `@reply_parameters`: the message id first, then the other reply parameters.
+- Every Bot API parameter can be written as a directive: `@text() ... @endText`, `@caption`, `@parse_mode(markdown)`, `@chat_id($chatId)`, `@reply_markup($markup)`, and so on. `@reply($messageId, quote: '...')` is the shortcut for `@reply_parameters`: the message id first, then the other reply parameters; `@reply()` with no arguments replies to the current message.
 - `@chat_id` is optional; it defaults to the chat of the current update. Pass it explicitly when rendering outside an update.
 - `@method('editMessageText')` changes the API method; the default is `sendMessage`. For edits, also pass the `message_id`.
 - Temple8 echoes `{{ }}` **raw** (the opposite of Blade); `{{{ }}}` escapes with `htmlspecialchars`, and `{!! !!}` is raw as well. Use `{{{ }}}` for anything a user can influence under `parse_mode(html)` or in a rich message. When using MarkdownV2, escape user content for Markdown instead.
