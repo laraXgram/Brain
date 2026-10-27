@@ -151,6 +151,13 @@ Simply set your token and url, then run the following command:
 php laragram webhook:set
 ```
 
+The webhook commands (`webhook:set`, `webhook:info`, `webhook:drop` to drop the pending updates, and `webhook:delete`) run for every connection that has a token, one after another. Pass `--connection` (or `-c`) to limit them to some connections:
+
+```shell
+php laragram webhook:set -c shop
+php laragram webhook:info -c shop -c support
+```
+
 Additionally, you can customize the `endpoint` in the `api_server` section based on your needs.
 Or, by setting `api_id` and `api_hash`, you can start your own API server by running:
 ```shell
@@ -180,7 +187,7 @@ Each update is handled in its own background process, exactly like a webhook upd
 php laragram poll -c first -c second
 ```
 
-Telegram does not deliver updates through `getUpdates` while a webhook is set, so the poller refuses to start for a connection that has one. Run `php laragram webhook:delete` first, or pass `--delete-webhook`. Pass `--drop-pending` to skip the updates that arrived while the bot was offline. When you stop the poller with `Ctrl+C`, it waits for the running updates and confirms them to Telegram, so they are not delivered again.
+Telegram does not deliver updates through `getUpdates` while a webhook is set, so the poller refuses to start for a connection that has one. Run `php laragram webhook:delete -c <connection>` first, or pass `--delete-webhook`. Pass `--drop-pending` to skip the updates that arrived while the bot was offline. When you stop the poller with `Ctrl+C`, it waits for the running updates and confirms them to Telegram, so they are not delivered again.
 
 > [!NOTE]
 > When [Surge](/v4/surge#long-polling) serves your application, start it with `php laragram surge:start --polling` instead: the updates are handed to Surge's workers.

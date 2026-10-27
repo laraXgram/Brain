@@ -743,11 +743,10 @@ Sometimes you want a single application to receive updates from several differen
 ],
 ```
 
-Then register the webhook of every bot, so Telegram sends its secret token with each update:
+Then register the webhook of every bot, so Telegram sends its secret token with each update. The command sets the webhook of each connection in turn (pass `-c first` to set only one):
 
 ```shell
-php laragram webhook:set --connection=first
-php laragram webhook:set --connection=second
+php laragram webhook:set
 ```
 
 With [long polling](/v4/installation#long-polling) no webhook or secret token is needed: `php laragram poll` polls every connection, each in its own process, and tells LaraGram which bot each update came from.
