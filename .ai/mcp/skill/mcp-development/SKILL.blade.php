@@ -148,6 +148,7 @@ protected function boot(): void
 
 - Bot API tool sets support `only()`, `except()`, `preset()`, `readOnly()`, `withoutDestructive()`, `allowChats()`, `connection()`, `requireAbilities()`, and `confirmDestructive()`. Keep large catalogs behind `ToolSearch`.
 - `BotRuntime` tools (`bot_listens`, `bot_simulate_update`, `bot_render_template`, `bot_conversation_state`) are only enabled in the `local` environment unless `inEnvironments()` / `inAllEnvironments()` is used. LaraGram Brain already exposes this tool set to the editor's agent, so register it in a server of your own only when another client needs it.
+- `bot_simulate_update` records navigation steps like a real update, so `back()` and `Make::back()` can be walked through by keeping `from.id` and `chat.id` the same across calls.
 - MTProto tools forward calls to the session's pump process when it runs under Surge, so they never open a second connection on the same session. Restrict peers with `allowPeers()` and file paths with `allowFilesFrom()`.
 
 ## Broadcasting From Tools

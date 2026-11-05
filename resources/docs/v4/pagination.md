@@ -415,6 +415,14 @@ $users->pages(); // [1, 2, 3, 4, 5]
 
 Since the Telegram paginator mirrors the web API, all of the standard instance methods — `previousPageUrl`, `nextPageUrl`, `getUrlRange`, `onFirstPage`, `hasMorePages`, `currentPage`, `lastPage`, and so on — work unchanged, except that they return `callback_data` instead of URLs. Telegram-named aliases (`previousPageData`, `nextPageData`, `pageData`, `getDataRange`) are available as well.
 
+To let users leave the list, add a button under the page buttons that goes back along their [navigation](/v4/navigation) trail:
+
+```php
+$users->withBackButton('🔙 Back');
+
+$users->withBackButton('🏠 Home', 'home');
+```
+
 <a name="publishing-telegram-templates"></a>
 ### Customizing the Pagination Templates
 

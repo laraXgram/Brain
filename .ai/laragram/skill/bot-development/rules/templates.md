@@ -43,6 +43,8 @@ Nested templates use dot notation (`orders.summary` → `app/templates/orders/su
 
 ## Keyboards
 
+`@back('🔙 Back', 'home')` adds a [navigation](navigation.md) back button inside a `@row`, and `@breadcrumbs(' / ')` prints the user's trail.
+
 Build keyboards with `@keyboard(type) ... @endKeyboard()`, `@row() ... @endRow`, and `@col($text, callback_data: ..., url: ...)`. The type defaults to `inline`; use `reply`, `remove`, or `force` for other keyboards. `@keyboardOptions(['resize_keyboard' => true])` sets options. Control structures (`@if`, `@foreach`) may wrap rows and columns; empty rows are skipped.
 
 ## Control Structures and Reuse

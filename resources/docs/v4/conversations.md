@@ -470,6 +470,7 @@ $questioner->ask('Your email')->name('email')->validate('email');
 - `Flow::repeat()` — ask the current question again.
 - `Flow::finish()` — complete now, keeping the answers collected so far.
 - `Flow::cancel('reason')` — cancel now.
+- `Flow::back($step = 1)` — cancel now and go back along the user's [navigation](/v4/navigation) trail.
 
 </div>
 
@@ -650,7 +651,7 @@ public function back(): ?Back
 }
 ```
 
-`onFirst` decides what the button does on the first question: `hide` (the default) leaves it out, and `cancel` turns it into a way out of the conversation.
+`onFirst` decides what the button does on the first question: `hide` (the default) leaves it out, `cancel` turns it into a way out of the conversation, and `navigate` leaves the conversation and goes back along the user's [navigation](/v4/navigation#in-conversations) trail.
 
 <a name="keyboard-clean-up"></a>
 ## Keyboard Clean Up

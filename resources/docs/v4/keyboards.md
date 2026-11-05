@@ -179,6 +179,7 @@ $keyboard = Keyboard::inlineKeyboardMarkup(
 |--------------------------------|--------------------------------------------------------------------------|
 | `url`                          | `text`, `url`                                                            |
 | `callbackData`                 | `text`, `callback_data`                                                  |
+| `back`                         | `?text`, `?step`, `?style`, `?icon_custom_emoji_id`, `?fallback`          |
 | `loginUrl`                     | `text`, `url`, `?forward_text`, `?bot_username`, `?request_write_access` |
 | `switchInlineQuery`            | `text`, `switch_inline_query`                                            |
 | `switchInlineQueryCurrentChat` | `text`, `switch_inline_query_current_chat`                               |
@@ -192,6 +193,13 @@ $keyboard = Keyboard::inlineKeyboardMarkup(
 | `requestLocation`              | `text`                                                                   |
 | `requestPoll`                  | `text`, `?type `                                                         |
 | `webApp`                       | `text`, `url`                                                            |
+
+The `back` button takes the user back along their [navigation](/v4/navigation#back-buttons) trail, with no listen of its own:
+
+```php
+Make::back('🔙 Back');            // one step
+Make::back('🏠 Home', 'home');    // the step named "home"
+```
 
 <a name="use-in-templates"></a>
 

@@ -124,6 +124,21 @@ To specify the keyboard type, simply pass the desired type as an argument to the
 @endKeyboard()
 ```
 
+The `@back` directive adds a button that goes back along the user's [navigation](/v4/navigation) trail, and `@breadcrumbs` prints that trail:
+
+```blade
+@text()
+    @breadcrumbs(' / ')
+@endText
+
+@keyboard()
+    @row()
+        @back('🔙 Back')
+        @back('🏠 Home', 'home')
+    @endRow
+@endKeyboard()
+```
+
 <a name="available-keyboard-types"></a>
 #### Available Keyboard Types
 

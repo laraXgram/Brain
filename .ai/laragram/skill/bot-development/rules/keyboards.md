@@ -63,3 +63,7 @@ When the bound record does not exist the listen does not run, so use `missing()`
 ## Keyboards in Templates
 
 When a message is rendered with Temple8, build its keyboard with the `@keyboard`, `@row`, and `@col` directives instead (see the templates rule).
+
+## Back Buttons
+
+`Make::back('🔙 Back')`, `Make::back('🏠 Home', 'home')` and `Make::back('🔙 Back', fallback: 'home')` go back along the user's trail with no listen of their own; `Make::breadcrumbs()` is a row of them. See [`navigation.md`](navigation.md).
