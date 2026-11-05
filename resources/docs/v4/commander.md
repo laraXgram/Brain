@@ -933,10 +933,30 @@ The `dev` Commander command starts all of the processes needed for local develop
 php laragram dev
 ```
 
-Under the hood, the `dev` command uses the `@laravel/multiplex` npm package to manage the processes, giving each process its own tab with searchable, scrollable output. Each process is labeled and color-coded so you can easily distinguish between them. If a process crashes, it will be restarted automatically, and when you quit, all of the output is written back to your terminal so nothing is lost.
+Each process gets its own tab with searchable, scrollable output, and a process that crashes is started again. The `dev` command is part of LaraGram itself, so it needs neither Node nor npm; a bot without a frontend can run it as it is.
+
+| Key | Action |
+| --- | --- |
+| `←` `→` `Tab` `1`-`9` | Switch tabs |
+| `↑` `↓` `j` `k` `PgUp` `PgDn` `g` `G` | Scroll |
+| `/` `n` `N` `Esc` | Search |
+| `r` | Restart the process |
+| `c` | Clear the output |
+| `s` / `t` | Switch to the stream of every process, and back to the tabs |
+| `f` | In the stream, choose the processes to show |
+| `q` | Stop everything and quit; the output stays in your scrollback |
+
+| Option | Description |
+| --- | --- |
+| `--stream` | Start in the stream of every process |
+| `--inline` | Print the output as it arrives, without the interface |
+| `--json` | Print newline-delimited JSON events; implies `--inline` |
+| `--timestamps` | Show the time on each line |
+| `--no-restart` | Do not start crashed processes again |
+| `--buffer-size` / `--stream-buffer-size` | The lines kept per process (`2000`) and in the stream (`10000`) |
 
 > [!NOTE]
-> The `dev` command requires Node 22.13 or later. On Windows, it falls back to the `concurrently` npm package and the tabbed interface is not available.
+> The output is printed inline when the input or output is not a terminal, and always on Windows. A process that crashes within a second of starting is not started again, because trying again would only scroll the real error away. Watchdog needs the `pcntl` extension, so the `logs` process is left out without it.
 
 The default processes are:
 
@@ -946,7 +966,7 @@ The default processes are:
 | `apiserver` | `php laragram start:apiserver` | When your bot uses a [local Bot API server](/v4/apiserver) (`API_ENDPOINT` points to `localhost` and `API_ID` / `API_HASH` are set). |
 | `client` | `php laragram client:start` | When [MTProto](/v4/mtproto) is installed and its pump is disabled. Otherwise, the client runs as a Surge process. |
 | `queue` | `php laragram queue:listen --tries=1 --timeout=0` | Always. |
-| `logs` | `php laragram watchdog --timeout=0` | When [Watchdog](/v4/watchdog) is installed. |
+| `logs` | `php laragram watchdog --timeout=0` | When [Watchdog](/v4/watchdog) is installed and the `pcntl` extension is loaded. |
 | `vite` | `npm run dev` | When your application has a `package.json` file. |
 
 > [!NOTE]

@@ -990,6 +990,65 @@ use function LaraGram\Console\Prompts\clear;
 clear();
 ```
 
+<a name="terminal-ui-components"></a>
+## Full-Screen Terminal UIs
+
+The prompts above draw a little at a time. The `LaraGram\Console\Prompts\Tui` classes are for a command that takes over the whole terminal, like [`php laragram dev`](/v4/commander#the-dev-command):
+
+| Class | Purpose |
+| --- | --- |
+| `Screen` | Enters the alternate screen with raw keys, draws only the rows that changed, reads keys without waiting, and gives the terminal back as it found it |
+| `LogView` | A capped log that wraps long lines and keeps colors, with scrolling, follow-the-end, search and filtering |
+| `TabBar` | A row of tabs that keeps the active one in view |
+| `KeyHints` | A row of key bindings, with optional text on its right |
+| `Ansi` | Width, wrapping, truncation and colors for text with escape sequences |
+
+```php
+use LaraGram\Console\Prompts\Key;
+use LaraGram\Console\Prompts\Tui\KeyHints;
+use LaraGram\Console\Prompts\Tui\LogView;
+use LaraGram\Console\Prompts\Tui\Screen;
+
+if (! Screen::isSupported()) {
+    return $this->runWithoutScreen();
+}
+
+$screen = new Screen;
+$log = new LogView(limit: 2000);
+
+$screen->enter('My tool');
+
+try {
+    while (true) {
+        [$columns, $rows] = $screen->size();
+        $height = $rows - 1;
+
+        foreach ($screen->keys() as $key) {
+            if ($key === 'q' || $key === Key::CTRL_C) {
+                return;
+            }
+
+            if ($key === Key::UP) {
+                $log->scroll(1, $height);
+            }
+        }
+
+        $log->resize($columns);
+
+        $screen->draw([
+            ...array_pad($log->render($height), $height, ''),
+            KeyHints::render(['↑' => 'scroll', 'q' => 'quit'], $columns),
+        ]);
+
+        usleep(30_000);
+    }
+} finally {
+    $screen->leave();
+}
+```
+
+`Screen::isSupported()` is `false` on Windows and when the input or output is not a terminal, so keep a plain way of running your command.
+
 <a name="terminal-considerations"></a>
 ## Terminal Considerations
 

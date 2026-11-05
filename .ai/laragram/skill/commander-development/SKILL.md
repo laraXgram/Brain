@@ -134,7 +134,8 @@ Pass commands as arrays to avoid shell injection, never interpolate user input i
 
 - To run another long-lived process during development (a scheduler, a second queue, a Node watcher), register it in `AppServiceProvider::boot()` instead of telling the user to open more terminals: `DevCommands::commander('schedule:work', 'scheduler')`, `DevCommands::node('storybook')`, `DevCommands::register('some-binary --watch', 'name')` (`LaraGram\Foundation\DevCommands`). Reusing a default name (`server`, `queue`, ...) replaces that process.
 - `DevCommands::only(...)`, `except(...)`, `order([...])`, `withoutVendorCommands()`, `withoutDefaultCommands()`, `disableAutoRestart()`, and `stream()` / `inline()` / `withTimestamps()` customize the run.
-- When you run `dev` yourself, pass `--json` (newline-delimited JSON events) or `--inline`; the interactive tabs need a real terminal. It needs Node 22.13+ (`@laravel/multiplex`; Windows falls back to `concurrently`).
+- When you run `dev` yourself, pass `--json` (newline-delimited JSON events) or `--inline`; the interactive tabs need a real terminal, and Windows always prints inline. It is part of the framework, so it needs neither Node nor npm.
+- Commands that take over the terminal build on `LaraGram\Console\Prompts\Tui`: `Screen`, `LogView`, `TabBar`, `KeyHints` and `Ansi`.
 
 ## Safety
 
