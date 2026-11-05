@@ -89,7 +89,8 @@ These were detected in the existing code; follow them unless the user asks other
 ## Commander, Scheduling and Processes
 
 - Activate `commander-development` when creating or changing console commands, closure commands in `listens/console.php`, prompts, scheduled tasks, or shell processes.
-- Scheduled tasks, jobs, and commands have no incoming update: `chat()`, `user()`, and `Auth::user()` are `null` there, so pass chat ids and the bot connection explicitly.
+- Scheduled tasks, jobs, and commands have no incoming update: `chat()` and `user()` are empty objects and `Auth::user()` is `null` there, so pass chat ids and the bot connection explicitly.
+- Update helpers (`chat()`, `user()`, `message()`, `callback_query()`…) return an empty object, never `null`, for a part the update does not carry. Test presence with `filled()`, `blank()`, `isset()` or `??`, never with `=== null`, `!== null` or `if ($x = callback_query())`.
 
 ## Images
 
