@@ -15,7 +15,7 @@ $client->sendMessage(
     peer: $chatId,
     message: '<b>Report</b> is ready',
     parse_mode: 'html',
-    reply_to_msg_id: $request->messageId(),
+    reply_to: $request->messageId(),
     silent: true,
     no_webpage: true,
 );
@@ -25,7 +25,9 @@ $client->sendRichMessage(peer: $chatId, content: "# Heading\n\n**bold** and `cod
 
 - `parse_mode` is `markdown` or `html` and is converted to entities; explicit `entities` override it. Escape user content before interpolating it into formatted text.
 - Keyboards (for bot sessions): build them with `Keyboard` / `Make` exactly like Bot API keyboards and pass `reply_markup: $keyboard->get()`.
-- Post into a forum topic with `top_msg_id: $topicId`.
+- Inside a handler, `$request->reply('Text', ['parse_mode' => 'markdown'])` answers the incoming message in its chat.
+- Post into a forum topic with `sendTopicMessage(peer:, topicId:, message:)`.
+- `markdown` uses `**bold**`; a single `*` is literal text.
 
 ## Editing, Forwarding and Housekeeping
 
@@ -93,7 +95,9 @@ $request->sendAlbum(peer: $chatId, items: [
 
 - Reuse uploads: `$fileId = $request->fileId($sent)` after sending, then `sendMediaById(peer: ..., fileId: $fileId)`.
 - Large files: `uploadFile(path: ..., progress: fn (int $uploaded, int $total) => ...)` returns an input file for `sendMedia(peer:, media:, message:)`; `uploadBytes($contents, $fileName)` uploads from memory.
+- In `sendAlbum`, video items take `duration`, `w`, `h`; audio items take `duration`, `title`, `performer`. `parse_mode` goes in `params:` or on one item. `sendStory` accepts photo or video paths.
 - MTProto has no Bot API size limits, so validate size and type yourself before uploading user-provided files.
+- Transcribe a file without sending it: `transcribeAudioFile($pathOrInputFile)`. While the result is `pending`, the final text arrives through `Client::onTranscribedAudioFile()` with the same `transcription_id`. `getTranscriptionLangs()` lists the supported languages.
 
 ## Downloading Media
 

@@ -14,6 +14,7 @@
     - [From an Update](#download-from-update)
     - [From the High-Level API](#download-high-level)
     - [File Info](#file-info)
+- [Transcribing Audio](#transcribing-audio)
 - [Stories](#stories)
 
 <a name="introduction"></a>
@@ -104,6 +105,8 @@ $request->sendPoll(
 );
 ```
 
+`params` also accepts `multiple_choice`, `public_voters`, `correct_answers`, `solution`, `close_period`, `close_date`, `open_answers`, `revoting_disabled`, `shuffle_answers`, `hide_results_until_close` and `subscribers_only`.
+
 <a name="albums"></a>
 ## Albums
 
@@ -115,10 +118,12 @@ $request->sendAlbum(
     items: [
         ['type' => 'photo', 'path' => '/img/1.jpg', 'caption' => 'First'],
         ['type' => 'photo', 'path' => '/img/2.jpg'],
-        ['type' => 'video', 'path' => '/vid/clip.mp4'],
+        ['type' => 'video', 'path' => '/vid/clip.mp4', 'duration' => 12, 'w' => 1280, 'h' => 720],
     ],
 );
 ```
+
+An item's `type` is detected from the file when omitted. Video items accept `duration`, `w` and `h`; audio items accept `duration`, `title` and `performer`. Format captions by passing `parse_mode` in `params:` for the whole album, or on an individual item.
 
 <a name="file-id"></a>
 ## Reusing Uploads with file_id
@@ -177,10 +182,10 @@ Client::onPhoto(function (ClientRequest $request) {
 Given any media object (for example from `getMessages`), download it to memory or to a file:
 
 ```php
-$message = $request->getMessages(peer: $chatId, ids: 500)[0] ?? null;
+$message = $request->getMessages(peer: $chatId, ids: 500)['messages'][0] ?? null;
 
-$bytes = $request->downloadMedia($message->media);                 // Returns the file contents
-$request->downloadMediaToFile($message->media, '/path/out.dat');   // Writes to disk
+$bytes = $request->downloadMedia($message['media']);                 // Returns the file contents
+$request->downloadMediaToFile($message['media'], '/path/out.dat');   // Writes to disk
 ```
 
 You can request a specific thumbnail size by passing `thumbSize` (e.g. `'m'`, `'x'`) where the method accepts it.
@@ -195,6 +200,20 @@ $info = $request->getMediaInfo();          // In a handler
 $info = $request->getFileInfo($message->media);
 ```
 
+<a name="transcribing-audio"></a>
+## Transcribing Audio
+
+`transcribeAudioFile` turns an audio file into text without sending it to a chat. Pass a local path or an input file you have already uploaded:
+
+```php
+$result = $request->transcribeAudioFile('/audio/meeting.ogg');
+
+$result['text'];
+$result['pending'] ?? false; // true while the text is still partial
+```
+
+While the result is `pending`, the final text arrives through `Client::onTranscribedAudioFile()` with the same `transcription_id`. To list the languages Telegram can recognize, call `$request->getTranscriptionLangs()`.
+
 <a name="stories"></a>
 ## Stories
 
@@ -202,6 +221,7 @@ Post, edit, and read stories through the high-level API. `peer` is where the sto
 
 ```php
 $story = $request->sendStory(peer: 'me', media: '/path/to/story.jpg', params: ['caption' => 'Hello!']);
+$request->sendStory(peer: 'me', media: '/path/to/story.mp4', params: ['duration' => 15, 'w' => 720, 'h' => 1280]);
 
 $request->editStory(peer: 'me', id: $story['id'], params: ['caption' => 'Edited']);
 $request->pinStory(peer: 'me', ids: $story['id']);

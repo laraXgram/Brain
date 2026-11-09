@@ -40,13 +40,13 @@ Client::onPhoto(function (ClientRequest $request) {
 
 | Area | Verbs |
 | --- | --- |
-| Messages | `onText` (alias `on`), `onCommand` (captures `{args?}`), `onReferral`, `onMessageType`, `onMessage`, `onEditedMessage`, `onSentMessage`, `onDeletedMessages`, `onPinnedMessages`, `onScheduledMessage`, `onMessageViews`, `onTranscribedAudio` |
-| Media | `onPhoto`, `onVideo`, `onAnimation`, `onSticker`, `onDocument`, `onAudio`, `onVoice`, `onVideoNote`, `onContact`, `onLocation`, `onVenue`, `onPoll`, `onPaidMedia`, `onDice` |
+| Messages | `onText` (alias `on`), `onCommand` (captures `{args?}`), `onReferral`, `onMessageType`, `onMessage`, `onEditedMessage`, `onSentMessage`, `onDeletedMessages`, `onPinnedMessages`, `onScheduledMessage`, `onMessageViews`, `onTranscribedAudio`, `onTranscribedAudioFile` |
+| Media | `onPhoto`, `onVideo`, `onAnimation`, `onSticker`, `onDocument`, `onAudio`, `onVoice`, `onVideoNote`, `onContact`, `onLocation`, `onVenue`, `onPoll`, `onPaidMedia`, `onWidget`, `onDice` |
 | Entities | `onHashtag`, `onCashtag`, `onMention`, `onUrl`, `onEmail`, `onBotCommandEntity` |
-| Queries | `onCallbackQuery`, `onCallbackQueryData`, `onInlineQuery`, `onChosenInlineResult`, `onPreCheckoutQuery`, `onShippingQuery` |
-| Chats | `onChat`, `onChannel`, `onChatParticipant`, `onChatParticipantAdd`, `onChatParticipantDelete`, `onChatParticipantAdmin`, `onChatJoinRequest`, `onChatBoost`, `onForumTopic` |
+| Queries | `onCallbackQuery`, `onCallbackQueryData`, `onInlineQuery`, `onChosenInlineResult`, `onWidgetQuery`, `onPreCheckoutQuery`, `onShippingQuery` |
+| Chats | `onChat`, `onChannel`, `onChatParticipant`, `onChatParticipantAdd`, `onChatParticipantDelete`, `onChatParticipantAdmin`, `onChatJoinRequest`, `onChatBoost`, `onForumTopic`, `onEditedForumTopic` |
 | Users and activity | `onUserStatus`, `onUserName`, `onUserPhone`, `onTyping`, `onReadHistory`, `onReactions`, `onPollVote`, `onPollResults` |
-| Other | `onStory`, `onStarsBalance`, `onWalletState`, `onWalletTransaction`, `onTonConnectSession`, `onTonConnectDisconnect`, `onEncryptedMessage`, `onEncryption`, `onBusinessMessage`, `onBusinessConnect`, `onDraft`, `onPhoneCall`, `onGroupCall`, `onUpdate` (any update), `fallback` |
+| Other | `onStory`, `onStarsBalance`, `onWalletState`, `onWalletTransaction`, `onTonConnectSession`, `onTonConnectDisconnect`, `onWidgetData`, `onEncryptedMessage`, `onEncryption`, `onBusinessMessage`, `onBusinessConnect`, `onDraft`, `onPhoneCall`, `onGroupCall`, `onUpdate` (any update), `fallback` |
 
 Many more update verbs exist; check the facade's docblock (`vendor/laraxgram/mtproto/src/Facades/Client.php`) before inventing a generic `onUpdate` handler that branches on `$request->type()`.
 

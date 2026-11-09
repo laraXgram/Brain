@@ -78,7 +78,7 @@ Pass `parse_mode` as `markdown` or `html` and LaraGram converts the formatting i
 ```php
 $client->sendMessage(
     peer: $chatId,
-    message: 'Hello *world*, visit [our site](https://laragram.dev).',
+    message: 'Hello **world**, visit [our site](https://laragram.dev).',
     parse_mode: 'markdown',
 );
 
@@ -111,13 +111,20 @@ $client->sendRichMessage(
 <a name="replies-silent"></a>
 ### Replies and Silent Messages
 
+Inside a handler, `reply` answers the incoming message in the same chat:
+
+```php
+$request->reply('Thanks for the message!');
+$request->reply('**Done**', ['parse_mode' => 'markdown', 'silent' => true]);
+```
+
 Additional parameters map straight to Telegram's options — reply to a message, send silently, disable the link preview, and so on:
 
 ```php
 $client->sendMessage(
     peer: $chatId,
     message: 'This is a reply, sent silently.',
-    reply_to_msg_id: $request->messageId(),
+    reply_to: $request->messageId(),
     silent: true,
     no_webpage: true,
 );
@@ -180,7 +187,15 @@ $client->readMessageContents(peer: $chatId, ids: 101); // Mark media/voice as co
 $client->sendChatAction(peer: $chatId, action: 'typing');
 $client->sendTyping(peer: $chatId);                 // Shortcut for the typing action
 $client->deleteHistory(peer: $chatId, forEveryone: false);
+$client->markMentionsRead(peer: $chatId);           // Clear unread mentions
+$client->markReactionsRead(peer: $chatId);          // Clear unread reactions
+$client->markChatUnread(peer: $chatId);             // Show the chat as unread
+$client->pinChat(peer: $chatId);                    // Pin it in the dialog list
+$client->translateMessages(peer: $chatId, ids: 101, toLang: 'fa');
+$client->getStickerSetByName('https://t.me/addstickers/Cats');
 ```
+
+`sendChatAction` accepts `typing`, `cancel`, `record_video`, `upload_video`, `record_voice`, `upload_voice`, `upload_photo`, `upload_document`, `record_video_note`, `upload_video_note`, `choose_sticker`, `choose_contact`, `find_location` and `game`. `deleteHistory`, `markMentionsRead` and `markReactionsRead` repeat until Telegram has processed the whole chat.
 
 From inside a handler you can also use the request shortcuts:
 
@@ -198,7 +213,22 @@ $results = $client->searchMessages(peer: $chatId, query: 'invoice');
 
 // Across all chats
 $results = $client->searchGlobal(query: 'meeting notes');
+
+// Filter by content type
+$photos = $client->searchMessages(peer: $chatId, params: ['filter' => 'photos']);
+
+// Walk every match lazily
+foreach ($client->iterateSearch(peer: $chatId, query: 'invoice', limit: 500) as $message) {
+    // ...
+}
+
+// The replies or comments under a message
+foreach ($client->iterateReplies(peer: $chatId, msgId: 42) as $reply) {
+    // ...
+}
 ```
+
+The `filter` names are `all`, `photos`, `videos`, `photo_video`, `documents`, `links`, `gifs`, `voice`, `music`, `chat_photos`, `round_voice`, `round_video`, `mentions`, `locations`, `contacts`, `pinned` and `polls`. A `MessagesFilter` object also works.
 
 For scheduled messages, see `getScheduledMessages`, `sendScheduledMessages`, and `deleteScheduledMessages` — each takes a `peer` and message ids.
 
@@ -221,6 +251,18 @@ Client::onInlineQuery(function (ClientRequest $request) {
         queryId: $request->query_id,
         results: [ /* inline result objects */ ],
     );
+});
+```
+
+Payments work the same way. Pass `error:` to reject the query:
+
+```php
+Client::onPreCheckoutQuery(function (ClientRequest $request) {
+    $request->answerPreCheckout(queryId: $request->query_id);
+});
+
+Client::onShippingQuery(function (ClientRequest $request) {
+    $request->answerShipping(queryId: $request->query_id, error: 'We do not ship to this address.');
 });
 ```
 

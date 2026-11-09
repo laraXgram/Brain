@@ -11,6 +11,9 @@
 - [Bot Controls](#bot-controls)
 - [Using Other Bots](#using-other-bots)
 - [Wallet & TON Connect](#wallet-ton-connect)
+- [Widgets](#widgets)
+    - [Answering Widget Queries](#widget-queries)
+    - [Reading & Querying Widgets](#reading-widgets)
 - [Share Themes](#share-themes)
 - [Password-Protected Methods](#password-protected-methods)
 - [Business Messages](#business-messages)
@@ -55,6 +58,8 @@ Vote in polls and read live results:
 ```php
 $request->voteInPoll(peer: $chatId, msgId: 500, options: 0);          // Vote option index
 $results = $request->getPollResults(peer: $chatId, msgId: 500);
+
+$request->closePoll(peer: $chatId, msgId: 500);                       // Stop a poll you sent
 ```
 
 <a name="drafts-checklists"></a>
@@ -161,6 +166,18 @@ $request->deleteStarGift(gift: $giftId);
 $rates = $request->getCurrencyRates(); // ['USD' => 0.013, 'TON' => ..., ...]
 ```
 
+Walk transaction history and saved gifts lazily:
+
+```php
+foreach ($request->iterateStarsTransactions(direction: 'in', limit: 100) as $transaction) {
+    // ...
+}
+
+foreach ($request->iterateSavedStarGifts(peer: '@channel') as $gift) {
+    // ...
+}
+```
+
 <a name="ephemeral-messages"></a>
 ## Ephemeral Messages
 
@@ -246,6 +263,107 @@ $balance = $request->toncenter('getAddressBalance', query: ['address' => $wallet
 ```
 
 Listen for wallet changes with `Client::onWalletState()`, `onWalletTransaction()`, `onTonConnectSession()` and `onTonConnectDisconnect()`. Every other `wallet.*` method (backups, secret phrase export, TON Connect requests) is on the [namespaced API](/v4/mtproto-requests#the-namespaced-api), for example `$request->wallet->getGaslessInfo()`.
+
+<a name="widgets"></a>
+## Widgets
+
+A bot can send a message that renders an interactive HTML widget. Only bot sessions can send, edit and answer widgets; any session can read one and send it queries.
+
+```php
+$request->sendWidget(
+    peer: $chatId,
+    html: '<button id="vote">Vote</button>',
+    caption: 'Live poll',
+    params: ['height' => 240, 'public_data' => '{"votes":0}', 'allow_queries' => true],
+);
+```
+
+The HTML can be up to 32768 bytes, and up to 4096 bytes once compressed with zlib. `params` accepts:
+
+| Option | Description |
+| --- | --- |
+| `width`, `height` | The size in pixels. `0`, the default, lets the client size it. |
+| `public_data` | Data that stays with the widget in copies and forwards. |
+| `chat_data` | Data specific to this chat. |
+| `allow_queries` | Let the widget send queries to the bot. |
+| `shared` | Make the widget resendable by its `widget_id`. |
+
+Any other `messages.sendMedia` parameter, such as `silent` or `invert_media`, passes through. A shared widget's id is in the sent message's `media.widget_id`. To send it again:
+
+```php
+$request->sendSharedWidget(peer: $otherChatId, widgetId: $widgetId, params: ['chat_data' => 'room-2']);
+```
+
+Update a widget's data without resending it:
+
+```php
+$request->editWidget(peer: $chatId, msgId: 120, publicData: '{"votes":1}');
+$request->editInlineWidget(id: $request->inline_message_id, chatData: 'room-2');
+$request->editSharedWidget(widgetId: $widgetId, publicData: '{"votes":1}', cacheTime: 60);
+```
+
+<a name="widget-queries"></a>
+### Answering Widget Queries
+
+`Client::onWidgetQuery()` receives every query sent to the bot, whether from a message, an inline message or a copy of a shared widget. Answer with the query id:
+
+```php
+Client::onWidgetQuery(function (ClientRequest $request) {
+    $result = match ($request->query_type['_']) {
+        'widgetQueryTypeData' => handleVote($request->data),
+        'widgetQueryTypeSignData' => 'signature-request-received',
+        'widgetQueryTypeSentTransaction' => 'transaction-recorded',
+    };
+
+    $request->answerWidgetQuery(queryId: $request->query_id, result: $result);
+});
+```
+
+The update also carries `user_id`, `widget_id` and, when the user shared it, `wallet_card`. `inline_message_id` is set for queries from inline messages. Queries from a copy of a shared widget have no chat, so `chatId()` returns null for them.
+
+<a name="reading-widgets"></a>
+### Reading & Querying Widgets
+
+`Client::onWidget()` fires for messages containing a widget. Use `widgetHtml()` to get its HTML, which Telegram delivers compressed:
+
+```php
+Client::onWidget(function (ClientRequest $request) {
+    $html = $request->widgetHtml($request->message);
+    $data = $request->message['media']['public_data'] ?? null;
+});
+```
+
+A session can query a widget's bot and read its current public data:
+
+```php
+use LaraGram\MTProto\Foundation\WidgetQuery;
+
+$answer = $request->queryWidget(peer: $chatId, msgId: 120, data: '{"action":"vote"}');
+
+$answer = $request->queryWidget(
+    peer: $chatId,
+    msgId: 120,
+    queryType: WidgetQuery::data(withWallet: true),
+);
+
+$public = $request->getWidgetPublicData(peer: $chatId, msgId: 120);
+```
+
+`queryWidget()` throws `BOT_RESPONSE_TIMEOUT` when the bot does not answer in time. `getWidgetPublicData()` accepts the last `hash:` you received and returns `messages.widgetPublicDataNotModified` when nothing changed; wait the response's `period`, in seconds, before polling again. `WidgetQuery` also builds `signData()` and `sentTransaction()` queries, using a wallet from `WidgetQuery::wallet()`. `Client::onWidgetData()` reports data changes for widgets already on screen.
+
+To post a widget from an inline query, use `InputMedia::inlineWidget()` or `InputMedia::inlineSharedWidget()` as the result's `send_message`:
+
+```php
+use LaraGram\MTProto\Foundation\InputMedia;
+
+$request->answerInlineQuery(queryId: $request->query_id, results: [[
+    '_' => 'inputBotInlineResult',
+    'id' => '1',
+    'type' => 'article',
+    'title' => 'Live poll',
+    'send_message' => InputMedia::inlineWidget(html: $html, message: 'Live poll', height: 240),
+]]);
+```
 
 <a name="share-themes"></a>
 ## Share Themes

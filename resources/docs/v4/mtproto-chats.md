@@ -82,7 +82,19 @@ foreach ($request->iterateParticipants(peer: '@laragram') as $participant) {
 }
 ```
 
-For a single page instead of a generator, use `getParticipants(peer: ..., limit: ...)`.
+For a single page instead of a generator, use `getParticipants(peer: ..., limit: ...)`. Basic groups support the `recent` and `admins` filters.
+
+The same style covers the rest of a chat's collections:
+
+```php
+$request->iterateJoinRequests(peer: '@group');                  // Pending join requests
+$request->iterateForumTopics(peer: '@group');                   // Forum topics
+$request->iterateAdminLog(peer: '@group', query: 'ban');        // Recent admin actions
+$request->iterateCommonChats(user: '@alice');                   // Chats you share with a user
+$request->iterateBlockedUsers();                                // This account's block list
+```
+
+Every iterator accepts `limit:` and `pageSize:`.
 
 <a name="creating-chats"></a>
 ## Creating Chats
@@ -134,7 +146,11 @@ $request->demoteChatMember(peer: '@group', user: '@moderator');
 $request->addChatMembers(peer: '@group', users: ['@alice', '@bob']);
 $request->joinChat(peer: '@laragram');
 $request->leaveChat(peer: '@laragram');
-$request->deleteChat(peer: '@oldgroup');
+$request->deleteChat(peer: '@oldgroup');                       // Basic groups, supergroups and channels
+
+$request->setChatMemberRank(peer: '@group', user: '@alice', rank: 'Mentor');
+$request->deleteChatMemberMessages(peer: '@group', user: '@spammer');
+$request->convertToSupergroup(peer: '@basicgroup');
 ```
 
 <a name="chat-settings"></a>
@@ -181,6 +197,20 @@ $links = $request->getInviteLinks(peer: '@group');
 $request->editInviteLink(peer: '@group', link: $temp['link'], params: ['usage_limit' => 20]);
 $request->revokeInviteLink(peer: '@group', link: $temp['link']);
 $request->deleteInviteLink(peer: '@group', link: $temp['link']);
+
+$preview = $request->checkInviteLink('https://t.me/+AbCdEf');   // Inspect a chat without joining
+```
+
+Handle requests to join a chat that requires approval:
+
+```php
+foreach ($request->iterateJoinRequests(peer: '@group') as $joinRequest) {
+    $request->approveJoinRequest(peer: '@group', user: $joinRequest['user_id']);
+}
+
+$request->declineJoinRequest(peer: '@group', user: '@spammer');
+$request->approveAllJoinRequests(peer: '@group');
+$request->declineAllJoinRequests(peer: '@group', link: $temp['link']);  // Only requests from this link
 ```
 
 <a name="pinning-messages"></a>
@@ -210,10 +240,12 @@ $request->deleteForumTopic(peer: '@group', topicId: $topic['id']);
 $topics = $request->getForumTopics(peer: '@group');
 ```
 
-To post into a topic, pass its id as `top_msg_id` when sending:
+Topics show as a list by default. Pass `tabs: true` or `sidebar: true` to `toggleForum` to use another layout; the two cannot be combined. `Client::onEditedForumTopic()` reports changes to a topic's title, icon, or closed and hidden state.
+
+To post into a topic, use `sendTopicMessage`:
 
 ```php
-$request->sendMessage(peer: '@group', message: 'Posted in a topic', top_msg_id: $topic['id']);
+$request->sendTopicMessage(peer: '@group', topicId: $topic['id'], message: 'Posted in a topic');
 ```
 
 <a name="communities"></a>
@@ -222,7 +254,7 @@ $request->sendMessage(peer: '@group', message: 'Posted in a topic', top_msg_id: 
 Telegram Communities (grouped chats) are managed through their own methods:
 
 ```php
-$request->createCommunity(title: 'My Community', /* ... */);
+$request->createCommunity(title: 'My Community', peer: '@main_channel');
 $joined = $request->getJoinedCommunities();
 $request->toggleCommunityCollapsed(/* ... */);
 $request->approveCommunityPeerLink(/* ... */);
@@ -245,7 +277,17 @@ $request->setOnline(online: true);
 $request->getContacts();
 $request->addContact(user: '@alice', firstName: 'Alice', phone: '+12025550123');
 $request->deleteContacts(users: '@alice');
+$request->importContact(phone: '+12025550123', firstName: 'Alice');
+
+// Privacy
+$rules = $request->getPrivacyRule('last_seen');
+$request->setPrivacyRule('phone_number', 'contacts');
 ```
+
+Privacy settings are `last_seen`, `chat_invites`, `calls`, `p2p_calls`, `forwards`, `profile_photo`, `phone_number`, `added_by_phone`, `voice_messages`, `about`, `birthday`, `star_gifts_auto_save`, `no_paid_messages` and `saved_music`. Rules are `everyone`, `contacts`, `close_friends`, `nobody`, or a list of `InputPrivacyRule` objects.
+
+> [!WARNING]
+> Importing many phone numbers can get an account banned. Only add numbers the account owner actually knows.
 
 <a name="boosts"></a>
 ## Boosts

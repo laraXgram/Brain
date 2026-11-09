@@ -87,6 +87,7 @@ Client::onScheduledMessage($action);        // New scheduled messages
 Client::onMessageViews($action);            // Channel view-count changes
 Client::onMessageForwards($action);         // Channel forward-count changes
 Client::onTranscribedAudio($action);        // Audio transcription results
+Client::onTranscribedAudioFile($action);    // Results for transcribeAudioFile
 ```
 
 <a name="media-verbs"></a>
@@ -109,6 +110,7 @@ Client::onInvoice($action);
 Client::onPoll($action);
 Client::onGiveaway($action);
 Client::onPaidMedia($action);
+Client::onWidget($action);
 Client::onDice($action, $emoji = 'any', $value = 0);
 ```
 
@@ -132,6 +134,7 @@ Client::onCallbackQuery($action);                    // All callback queries
 Client::onCallbackQueryData($pattern, $action);      // Matching a data pattern
 Client::onInlineQuery($action);
 Client::onChosenInlineResult($action);
+Client::onWidgetQuery($action);                     // Queries from the bot's widgets
 Client::onPreCheckoutQuery($action);
 Client::onShippingQuery($action);
 ```
@@ -149,6 +152,7 @@ Client::onChatParticipantAdmin($action);     // Admin rights changed
 Client::onChatJoinRequest($action);
 Client::onChatBoost($action);
 Client::onForumTopic($action);               // Forum topic pinned/unpinned
+Client::onEditedForumTopic($action);         // Forum topic title, icon, or state changed
 ```
 
 <a name="reaction-verbs"></a>
@@ -184,6 +188,7 @@ Client::onWalletState($action);              // TON wallet created or balance ch
 Client::onWalletTransaction($action);        // A wallet transfer was sent
 Client::onTonConnectSession($action);        // A dapp connected over TON Connect
 Client::onTonConnectDisconnect($action);     // TON Connect sessions about to close
+Client::onWidgetData($action);               // A widget's data changed
 Client::onEncryptedMessage($action);         // Secret-chat messages
 Client::onEncryption($action);               // Secret-chat state
 Client::onBusinessMessage($action);          // Telegram Business messages
