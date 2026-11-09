@@ -17,6 +17,7 @@
 - [Storage](#storage)
     - [The Working Directory](#the-working-directory)
     - [Serving Files](#serving-files)
+    - [Cleaning Up Downloaded Files](#cleaning-up-downloaded-files)
 - [Statistics](#statistics)
 - [Logging](#logging)
 - [Running in Production](#running-in-production)
@@ -41,6 +42,8 @@ The API Server requires PHP 8.3 or greater along with the following PHP extensio
 - [Swoole](https://github.com/swoole/swoole-src)
 - JSON
 - Mbstring
+- OpenSSL
+- Zlib
 
 Typically, the Swoole extension can be installed via PECL:
 
@@ -165,6 +168,8 @@ The server accepts the same options as the official `telegram-bot-api` binary. Y
 | `--cpu-affinity` | The CPU affinity, as a 64-bit mask. |
 | `--main-thread-affinity` | The CPU affinity of the main thread, as a 64-bit mask. |
 | `--proxy` | An HTTP proxy for outgoing webhook requests, in the `http://host:port` format. |
+| `--no-storage-cleanup` | Never [delete downloaded files](#cleaning-up-downloaded-files) automatically. |
+| `--storage-*` | The limits and filters of the [automatic clean-up](#cleaning-up-downloaded-files). |
 
 </div>
 
@@ -289,6 +294,7 @@ The server keeps all of its state in the working directory given by the `--dir` 
 ```text
 working-directory/
 ├── webhooks_db.json
+├── storage_gc.json
 └── 123456789:AAE.../
     ├── chat_info_db
     ├── options
@@ -321,6 +327,76 @@ location / {
 }
 ```
 
+<a name="cleaning-up-downloaded-files"></a>
+### Cleaning Up Downloaded Files
+
+Downloaded files are only a cache of what Telegram stores: a file that has been deleted is simply downloaded again by the next `getFile` request. Like the official server, the API Server removes old downloads on its own. Every limit applies to each bot separately:
+
+<div class="overflow-auto">
+
+| Limit | Option | Default |
+| --- | --- | --- |
+| Number of files | `--storage-max-files` | `40000` |
+| Total size | `--storage-max-size` | `100M` |
+| Time since the last use | `--storage-max-age` | `23h` |
+
+</div>
+
+Each of these limits may be raised, or turned off by setting it to `0`. To turn the automatic clean-up off entirely, start the server with `--no-storage-cleanup`:
+
+```shell
+laragram-server --local --storage-max-size=20G --storage-max-age=7d --storage-max-files=0
+```
+
+> [!WARNING]
+> In [local mode](#local-mode), an application that keeps using the absolute `file_path` returned by `getFile` should copy the file or call `getFile` again later, since the file may have been cleaned up in the meantime.
+
+The server checks the limits once a day, and also as soon as downloads push a bot over its file count or size limit. Files past the age limit are deleted first. After that, the least recently used files are deleted until the bot fits its limits. Files downloaded within the last hour are never deleted, but they do count towards the limits. Calling `getFile` for a file counts as using it.
+
+The following options refine the automatic clean-up:
+
+<div class="overflow-auto">
+
+| Option | Description |
+| --- | --- |
+| `--storage-age-from` | Measure the age from the last `access` (the default) or from the `download`. |
+| `--storage-immunity` | How long a new file is protected from deletion. Defaults to `1h`. |
+| `--storage-interval` | The time between two scheduled clean-ups. Defaults to `1d`. |
+| `--storage-scope` | Apply the limits to each `bot` (the default) or to the whole `server`. |
+| `--storage-types`, `--storage-exclude-types` | A comma-separated list of [file types](#storage-file-types) to clean or to protect. |
+| `--storage-extensions`, `--storage-exclude-extensions` | A comma-separated list of file extensions to clean or to protect. |
+| `--storage-min-file-size`, `--storage-max-file-size` | Only clean files within this size range. |
+| `--storage-bots`, `--storage-exclude-bots` | A comma-separated list of bot identifiers to clean or to protect. |
+
+</div>
+
+Sizes accept a `K`, `M`, `G`, or `T` suffix, and durations accept `s`, `m`, `h`, `d`, or `w`, such as `90m` or `1d12h`. Files outside a filter neither count towards the limits nor get deleted, so `--storage-types=videos --storage-max-size=5G` keeps the videos of each bot under 5 GB and leaves every other file alone.
+
+<a name="storage-file-types"></a>
+The file types are the directories of the downloaded files: `animations`, `documents`, `music`, `notification_sounds`, `passport`, `photos`, `profile_photos`, `secret`, `secret_thumbnails`, `stickers`, `stories`, `temp`, `thumbnails`, `video_notes`, `videos`, `voice`, and `wallpapers`.
+
+<a name="the-storage-clean-command"></a>
+#### The `storage:clean` Command
+
+The `storage:clean` command runs a single clean-up, which is useful from cron or a scheduler. It accepts the same limits and filters without the `storage-` prefix, and it is safe to run next to a running server. Unlike the automatic clean-up, it has no default limits, so you must state what to delete:
+
+```shell
+laragram-server storage:clean --dir=/var/lib/laragram-server --max-age=7d --max-size=50G
+
+# Delete every video and document older than the immunity delay...
+laragram-server storage:clean --dir=/var/lib/laragram-server --all --types=videos,documents
+```
+
+The `--dry-run` option reports what would be deleted without deleting it, `--list` prints each deleted file, and `--json` prints the report as JSON. If the downloaded files are stored elsewhere, pass the same `--files-dir` as the server.
+
+To run the command from your LaraGram application's [scheduler](/v4/scheduling):
+
+```php
+use LaraGram\Support\Facades\Schedule;
+
+Schedule::exec('laragram-server storage:clean --dir=/var/lib/laragram-server --max-age=7d')->daily();
+```
+
 <a name="statistics"></a>
 ## Statistics
 
@@ -330,7 +406,7 @@ The server can publish a statistics page with the number of bots, requests and u
 laragram-server --local --http-stat-port=8082 --http-stat-ip-address=127.0.0.1
 ```
 
-The statistics are then available at `http://127.0.0.1:8082`. You may append `?id=<bot_id>` to the URL to view the statistics of a single bot. When starting the server through `start:apiserver`, the statistics address is taken from the `stat` option of the `api_server` configuration.
+The statistics are then available at `http://127.0.0.1:8082`, along with `storage_*` lines describing the [automatic clean-up](#cleaning-up-downloaded-files). You may append `?id=<bot_id>` to the URL to view the statistics of a single bot. When starting the server through `start:apiserver`, the statistics address is taken from the `stat` option of the `api_server` configuration.
 
 > [!WARNING]
 > The statistics page lists the tokens of your bots. Bind it to a private address and never expose it publicly.
