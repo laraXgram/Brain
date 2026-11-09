@@ -19,6 +19,8 @@ A production LaraGram application has up to four long-lived parts. Identify whic
 
 Use `search-docs` for the exact options (`deployment`, `surge`, `queues`, `scheduling`, `mtproto-configuration`).
 
+When the project deploys with Docker, activate `armada-development` and use `php laragram armada:production` instead of the Nginx and Supervisor steps below.
+
 ## Safety Rules
 
 - Never commit or print `.env`, bot tokens, `API_HASH`, webhook secret tokens, or MTProto session files (`storage/` session directory).

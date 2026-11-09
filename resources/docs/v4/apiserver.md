@@ -365,6 +365,9 @@ When a bot fails to log in, the reason is logged at the warning level, so starti
 <a name="running-in-production"></a>
 ## Running in Production
 
+> [!NOTE]
+> To run this server, or Telegram's official server, in Docker next to your application, see [LaraGram Armada](/v4/armada#telegram-bot-api-servers).
+
 In production, you should use a process monitor to keep the server running and restart it if it stops. For example, on Linux distributions using systemd, you may create a `/etc/systemd/system/laragram-server.service` unit file:
 
 ```ini

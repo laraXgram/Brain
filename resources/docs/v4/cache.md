@@ -66,7 +66,7 @@ If needed, you may set the `host` option to a UNIX socket path. If you do this, 
 <a name="redis"></a>
 #### Redis
 
-Before using a Redis cache with LaraGram, you will need to either install the PhpRedis PHP extension via PECL or install the `predis/predis` package (~2.0) via Composer. [LaraGram Armada](/armada) already includes this extension.
+Before using a Redis cache with LaraGram, you will need to either install the PhpRedis PHP extension via PECL or install the `predis/predis` package (~2.0) via Composer. [LaraGram Armada](/v4/armada) already includes this extension.
 
 For more information on configuring Redis, consult its [LaraGram documentation page](/v4/redis#configuration).
 

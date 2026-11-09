@@ -23,7 +23,7 @@ node -v
 npm -v
 ```
 
-You can easily install the latest version of Node and NPM using simple graphical installers from [the official Node website](https://nodejs.org/en/download/). Or, if you are using [LaraGram Armada](https://laraxgram.github.io/armada), you may invoke Node and NPM through Armada:
+You can easily install the latest version of Node and NPM using simple graphical installers from [the official Node website](https://nodejs.org/en/download/). Or, if you are using [LaraGram Armada](/v4/armada), you may invoke Node and NPM through Armada:
 
 ```shell
 ./vendor/bin/armada node -v
@@ -132,7 +132,7 @@ If you are unable to generate a trusted certificate for your system, you may ins
 <a name="configuring-hmr-in-sail-on-wsl2"></a>
 #### Running the Development Server in Armada on WSL2
 
-When running the Vite development server within [LaraGram Armada](/armada) on Windows Subsystem for Linux 2 (WSL2), you should add the following configuration to your `vite.config.js` file to ensure the browser can communicate with the development server:
+When running the Vite development server within [LaraGram Armada](/v4/armada) on Windows Subsystem for Linux 2 (WSL2), you should add the following configuration to your `vite.config.js` file to ensure the browser can communicate with the development server:
 
 ```js
 // ...
@@ -223,7 +223,7 @@ npm run dev
 npm run build
 ```
 
-If you are running the development server in [Armada](/armada) on WSL2, you may need some [additional configuration](#configuring-hmr-in-sail-on-wsl2) options.
+If you are running the development server in [Armada](/v4/armada) on WSL2, you may need some [additional configuration](#configuring-hmr-in-sail-on-wsl2) options.
 
 <a name="working-with-scripts"></a>
 ## Working With JavaScript

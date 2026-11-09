@@ -9,6 +9,8 @@ use LaraGram\Brain\Discovery\Package;
 
 class PackageRegistry
 {
+    public const ARMADA = 'laraxgram/armada';
+
     public const BRAIN = 'laraxgram/brain';
 
     public const LARAGRAM = 'laraxgram/core';
@@ -51,6 +53,7 @@ class PackageRegistry
         '@laraxgram/svelte' => 'luna-svelte',
         '@laraxgram/vue3' => 'luna-vue',
         'laraxgram/luna' => 'luna-laragram',
+        'laraxgram/armada' => 'armada',
         'laraxgram/brain' => 'brain',
         'laraxgram/core' => 'laragram',
         'laraxgram/laraquest' => 'laraquest',

@@ -18,7 +18,7 @@ php laragram help migrate
 <a name="laragram-armada"></a>
 #### LaraGram Armada
 
-If you are using [LaraGram Armada](/armada) as your local development environment, remember to use the `armada` command line to invoke Commander commands. Armada will execute your Commander commands within your application's Docker containers:
+If you are using [LaraGram Armada](/v4/armada) as your local development environment, remember to use the `armada` command line to invoke Commander commands. Armada will execute your Commander commands within your application's Docker containers:
 
 ```shell
 ./vendor/bin/armada laragram list

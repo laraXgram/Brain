@@ -22,7 +22,7 @@ Additionally, MongoDB is supported via the `laraxgram/mongodb` package, which is
 
 The configuration for LaraGram's database services is located in your application's `config/database.php` configuration file. In this file, you may define all of your database connections, as well as specify which connection should be used by default. Most of the configuration options within this file are driven by the values of your application's environment variables. Examples for most of LaraGram's supported database systems are provided in this file.
 
-By default, LaraGram's sample [environment configuration](/v4/configuration#environment-configuration) is ready to use with [LaraGram Armada](/armada), which is a Docker configuration for developing LaraGram applications on your local machine. However, you are free to modify your database configuration as needed for your local database.
+By default, LaraGram's sample [environment configuration](/v4/configuration#environment-configuration) is ready to use with [LaraGram Armada](/v4/armada), which is a Docker configuration for developing LaraGram applications on your local machine. However, you are free to modify your database configuration as needed for your local database.
 
 <a name="sqlite-configuration"></a>
 #### SQLite Configuration
