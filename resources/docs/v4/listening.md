@@ -103,6 +103,8 @@ Bot::onCashtag($action)
 Bot::onUrl($action)
 Bot::onEmail($action)
 Bot::onPhoneNumber($action)
+Bot::onBankCardNumber($action)
+Bot::onTonAddress($action)
 Bot::onTextLink($action)
 Bot::onTextMention($action)
 Bot::onCustomEmoji($action)
@@ -175,6 +177,19 @@ Bot::onChatBoost($action)
 Bot::onRemovedChatBoost($action)
 Bot::onManagedBot($action)
 Bot::onPollUpdate($action)
+Bot::onSubscription($action)
+Bot::onSubscriptionState($state, $action)
+Bot::onStoppedMessageGeneration($action)
+Bot::onCommunityChatAdded($action)
+Bot::onCommunityChatJoined($action)
+Bot::onCommunityChatRemoved($action)
+Bot::onEphemeralMessage($action)
+Bot::onWidget($action)
+Bot::onWidgetQuery($action)
+Bot::onWidgetQueryType($type, $action)
+Bot::onSharedWidgetQuery($action)
+Bot::onTonWalletTransfer($action)
+Bot::onPaidMessagesWaived($action)
 ```
 
 <a name="pagination-listens"></a>
@@ -191,6 +206,31 @@ Bot::onPaginate('users', function (Request $request, int $page) {
     return template('users', [
         'paginator' => User::telegramPaginate(10, page: $page, key: 'users'),
     ]);
+});
+```
+
+<a name="widget-listens"></a>
+#### Widget Listens
+
+Messages with HTML widgets, sent with `sendWidget` or `sendSharedWidget`, may send queries back to your bot. The `onWidgetQuery` method handles queries from widgets in messages sent by the bot or via the bot, while `onSharedWidgetQuery` handles queries from forwarded messages with shared widgets. The `widget_query` and `shared_widget_query` helpers return the query, and every query must be answered with `answerWidgetQuery`:
+
+```php
+use LaraGram\Request\Request;
+
+Bot::onWidgetQuery(function (Request $request) {
+    $request->answerWidgetQuery(widget_query()->id, json_encode([
+        'score' => 42,
+    ]));
+});
+```
+
+A query may carry data for the bot together with the TON wallet card of the user, data signed by the user's TON wallet, or a notification about a transaction sent from it. You may listen for specific kinds of queries using the `onWidgetQueryType` method, which accepts `data`, `sign_data`, `sent_transaction`, or an array of them:
+
+```php
+Bot::onWidgetQueryType('sent_transaction', function (Request $request) {
+    $query = widget_query() ?? shared_widget_query();
+
+    // $query->type->wallet->address, $query->type->msg_hash...
 });
 ```
 
