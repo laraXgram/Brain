@@ -64,6 +64,7 @@ Rules:
 - A bot must be logged out of the cloud once before using a local server.
 - With a local server, webhooks are delivered inside the Docker network (`BOT_URL=http://laragram.test`, or `http://app:8000` in production), so no tunnel or HTTPS is needed. With the cloud API, webhooks need a public HTTPS URL.
 - `getFile` returns paths under `/var/lib/bot-api`, mounted at the same path in the application and `bot-api` containers. Read them directly.
+- The LaraGram API Server may stream files at `/file/bot<token>/<file_path>` (`API_STREAM_FILES=true`) and run without writing files to disk (`API_FILE_STORAGE=false`, requires streaming). `getFile` then returns a relative path; LaraGram's file helpers download it over HTTP, so never read it from disk. Restart with `armada restart bot-api` after changing them.
 - Statistics are on `bot-api:8082`, inside the Docker network only, because the page lists bot tokens.
 - Images come from `ghcr.io/laraxgram/telegram-bot-api` and `ghcr.io/laraxgram/apiserver`, falling back to a source build.
 

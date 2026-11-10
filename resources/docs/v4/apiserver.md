@@ -17,6 +17,8 @@
 - [Storage](#storage)
     - [The Working Directory](#the-working-directory)
     - [Serving Files](#serving-files)
+    - [Streaming Files](#streaming-files)
+    - [Running Without File Storage](#running-without-file-storage)
     - [Cleaning Up Downloaded Files](#cleaning-up-downloaded-files)
 - [Statistics](#statistics)
 - [Logging](#logging)
@@ -168,10 +170,15 @@ The server accepts the same options as the official `telegram-bot-api` binary. Y
 | `--cpu-affinity` | The CPU affinity, as a 64-bit mask. |
 | `--main-thread-affinity` | The CPU affinity of the main thread, as a 64-bit mask. |
 | `--proxy` | An HTTP proxy for outgoing webhook requests, in the `http://host:port` format. |
+| `--stream-files` | Serve files at their `/file/` URLs, [streaming](#streaming-files) them from Telegram. |
+| `--stream-read-ahead` | The number of 1 MB chunks of a [streamed file](#streaming-files) fetched ahead of the one being sent. Defaults to `4`. |
+| `--no-file-storage` | Never write files to disk, see [running without file storage](#running-without-file-storage). Requires `--stream-files`. |
 | `--no-storage-cleanup` | Never [delete downloaded files](#cleaning-up-downloaded-files) automatically. |
 | `--storage-*` | The limits and filters of the [automatic clean-up](#cleaning-up-downloaded-files). |
 
 </div>
+
+The `--stream-files`, `--stream-read-ahead`, and `--no-file-storage` options are specific to the LaraGram API Server; the official server doesn't have them.
 
 > [!NOTE]
 > Some options, such as `--memory-verbosity`, `--log-max-file-size`, and the CPU affinity options, are accepted for compatibility with scripts written for the official server.
@@ -225,6 +232,9 @@ The Bot API server used by your LaraGram application is configured in the `api_s
     ],
     'api_id' => env("API_ID", ''),
     'api_hash' => env("API_HASH", ''),
+    'stream_files' => env('API_STREAM_FILES', false),
+    'stream_read_ahead' => env('API_STREAM_READ_AHEAD', 4),
+    'file_storage' => env('API_FILE_STORAGE', true),
 ],
 ```
 
@@ -258,6 +268,9 @@ The `endpoint` option is the base URL that your application sends its Bot API re
 | `log_dir` | The path of the server's log file. Logs go to the console when empty. |
 | `ip` | The local IP address the server listens on. |
 | `port` | The port the server listens on. |
+| `stream_files` | [Stream files](#streaming-files) at their `/file/` URLs. LaraGram API Server only. |
+| `stream_read_ahead` | The number of 1 MB chunks of a streamed file fetched in advance. |
+| `file_storage` | Write files to disk. Set it to `false` to [run without file storage](#running-without-file-storage), which requires `stream_files`. |
 | `stat` | The IP address and port of the [statistics](#statistics) page. Disabled when empty. |
 | `api_id` | Your Telegram application identifier. |
 | `api_hash` | Your Telegram application identifier hash. |
@@ -312,7 +325,7 @@ A bot's directory is deleted when the bot logs out, either through the `logOut` 
 
 Files fetched by the `getFile` method are stored in the bot's directory, or in the directory given by `--files-dir`. In local mode, `getFile` returns the absolute path of the file, so an application on the same machine can read it directly from disk.
 
-Like the official server, the API Server does not serve the downloaded files over HTTP. Outside of local mode, or when your application runs on another machine, you may serve the files directory with a web server such as Nginx. The following configuration serves files at the same URLs as `api.telegram.org`, which are `/file/bot<token>/<file_path>`:
+Like the official server, the API Server does not serve the downloaded files over HTTP by default. Outside of local mode, or when your application runs on another machine, you may [let the server stream them](#streaming-files), or serve the files directory with a web server such as Nginx. The following configuration serves files at the same URLs as `api.telegram.org`, which are `/file/bot<token>/<file_path>`:
 
 ```nginx
 location ~ ^/file/bot([^/]+)/(.*)$ {
@@ -326,6 +339,41 @@ location / {
     proxy_set_header X-Real-IP $remote_addr;
 }
 ```
+
+<a name="streaming-files"></a>
+### Streaming Files
+
+When the server is started with the `--stream-files` option, it serves files itself, at the same URLs as `api.telegram.org`:
+
+```shell
+laragram-server --stream-files --api-id=123456 --api-hash=0123456789abcdef0123456789abcdef
+```
+
+The `getFile` method then answers right away, without downloading the file first. The `file_path` it returns names the file, and requesting it streams the file from Telegram while it is being downloaded:
+
+```shell
+curl -O http://127.0.0.1:8081/file/bot<token>/<file_path>
+```
+
+Streamed files support byte ranges, so video and audio players can seek, and interrupted downloads can be resumed with a `Range` header. While one chunk of the file is being sent, the following chunks are already being downloaded; the `--stream-read-ahead` option sets how many, and defaults to `4` chunks of 1 MB each.
+
+A file that is already on disk is sent from there. When a file is streamed from its first byte to its last, it is also stored like a downloaded file, so the next request is answered from disk and the [automatic clean-up](#cleaning-up-downloaded-files) removes it in time.
+
+> [!NOTE]
+> Without `--local`, the limits of `api.telegram.org` still apply: files over 20 MB can't be streamed. In local mode, `getFile` returns the absolute path of a file that is already on disk, and the `file_path` of a streamed file otherwise.
+
+<a name="running-without-file-storage"></a>
+### Running Without File Storage
+
+By default, the server writes files to disk twice: `getFile` stores the files it downloads, and uploads are saved to temporary files until they are sent to Telegram. The `--no-file-storage` option turns both off, which suits containers with a read-only or small disk:
+
+```shell
+laragram-server --stream-files --no-file-storage --api-id=123456 --api-hash=0123456789abcdef0123456789abcdef
+```
+
+Without file storage, every file is [streamed](#streaming-files), so the option requires `--stream-files`. Uploads are sent to Telegram while the request is being received: a file of up to 10 MB is kept in memory until the request is handled, and a bigger file is sent in parts as they arrive, so the memory used by an upload stays the same whatever its size. Webhook certificates are still saved, since they are part of the bot's settings.
+
+LaraGram's [file helpers](/v4/requests#file-downloads) download files from their `/file/` URLs, so they work with both options without any change.
 
 <a name="cleaning-up-downloaded-files"></a>
 ### Cleaning Up Downloaded Files

@@ -231,6 +231,20 @@ Each server also publishes its [statistics](/v4/apiserver#statistics) on port `8
 
 In local mode, `getFile` returns an absolute path instead of a download URL. Armada mounts the server's data at `/var/lib/bot-api` in both the `bot-api` and application containers, and runs both as your user, so your application can read the returned path directly and upload files using `file://` paths in that directory.
 
+The LaraGram API Server may also [stream files](/v4/apiserver#streaming-files) at their `/file/` URLs, or [run without file storage](/v4/apiserver#running-without-file-storage) at all. Armada passes the same environment variables that `start:apiserver` reads to the `bot-api` container:
+
+```ini
+API_STREAM_FILES=true
+API_STREAM_READ_AHEAD=4
+API_FILE_STORAGE=false
+```
+
+Restart the server after changing them:
+
+```shell
+armada restart bot-api
+```
+
 <a name="server-images"></a>
 ### Server Images
 
