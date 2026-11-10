@@ -81,14 +81,23 @@ The installer asks all of its questions up front, then installs and configures t
 | LaraGram Brain | Installs [LaraGram Brain](/v4/brain) to improve AI assisted coding. |
 | API routes | Creates the `routes/api.php` file for your application's API. |
 | LaraGram Surge | Which server [Surge](/v4/surge) should use. MTProto and the LaraGram API Server run on Surge with Swoole, so Surge is configured for them automatically. |
+| LaraGram Armada | Which services [Armada](/v4/armada) should run in Docker, such as MySQL, PostgreSQL, or Redis. The database you choose is selected by default. Armada runs the application and your local Bot API server in their own containers, so the LaraGram API Server is not installed with Composer and its PHP extensions are not required on your machine. |
 
-Finally, the installer asks which database your application will use. Only the drivers whose PDO extension is installed may be selected, and SQLite is used by default.
+Finally, the installer asks which database your application will use. Only the drivers whose PDO extension is installed may be selected, and SQLite is used by default. When Armada is selected, every driver may be selected, since the database runs in a container.
 
 Every question may be skipped by pressing Enter, and you may also provide the values later in your application's `.env` file. Once the application has been created, the installer displays the commands you need to start it. Typically, you will start all of the processes your application needs, such as the development server, the queue worker, and your local Bot API server, using the [`dev`](/v4/commander#the-dev-command) Commander command:
 
 ```shell
 cd example-app
 php laragram dev
+```
+
+When Armada is selected, start the containers instead. The migrations of a database that runs in a container are run once the containers are up:
+
+```shell
+cd example-app
+./vendor/bin/armada up -d
+./vendor/bin/armada laragram migrate
 ```
 
 Once you have started the development server, your application will be accessible at `http://localhost:9000` for set webhook. Next, you're ready to [start taking your next steps into the LaraGram ecosystem](#next-steps). Of course, you may also want to [configure a database](#databases-and-migrations).
@@ -117,6 +126,8 @@ laragram new example-app --token=123456:ABC-DEF --bot-url=https://example.com --
 | `--api` | Create the API routes file. |
 | `--surge` | Install LaraGram Surge with the given server: `swoole` (default), `roadrunner`, or `frankenphp`. |
 | `--database` | The database driver: `sqlite`, `mysql`, `mariadb`, `pgsql`, or `sqlsrv`. |
+| `--armada` | Install [LaraGram Armada](/v4/armada) to run the application with Docker. |
+| `--armada-services` | The services Armada should run, separated by commas: `mysql`, `pgsql`, `mariadb`, `mongodb`, `redis`, `valkey`, `memcached`, or `none`. Defaults to the selected database and Redis. |
 | `--npm`, `--pnpm`, `--bun`, `--yarn`, `--no-node` | Choose the package manager that installs and builds the frontend dependencies, or skip them. |
 | `--git`, `--branch` | Initialize a Git repository with the given default branch. |
 | `--github`, `--organization` | Create a repository on GitHub using the `gh` CLI and push the application to it. |

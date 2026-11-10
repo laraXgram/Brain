@@ -49,6 +49,9 @@ composer require laraxgram/armada --dev
 php laragram armada:install
 ```
 
+> [!NOTE]
+> When you create your application using the [LaraGram installer](/v4/installation#creating-an-application), you may select **LaraGram Armada**. The installer requires Armada and runs the `armada:install` command for you, passing the database, Bot API server, and Surge choices you made during the installation.
+
 The command asks which database and cache services you want, which [Bot API server](#telegram-bot-api-servers) the bot should use, how it should [receive updates](#receiving-updates), and which [processes](#background-processes) should run. It then writes `compose.yaml`, updates your `.env` file, and prepares the images.
 
 You may answer the same questions with options, which is useful in scripts:
