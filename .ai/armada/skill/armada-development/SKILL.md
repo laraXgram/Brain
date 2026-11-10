@@ -57,6 +57,8 @@ Rules:
 - Under Surge, do not add `mtproto`: the pump runs as a Surge process.
 - Use `sentinel-queue` or `queue`, never both.
 - MTProto sessions must be authorized first: `armada laragram client:auth`, then `armada restart`.
+- Supervisor runs the processes; inspect or restart one with `supervisorctl status` / `supervisorctl restart queue` from `armada root-shell`.
+- Sentinel's **Armada** page (containers, health, usage, logs, start/stop/restart) needs the `docker-proxy` service (`php laragram armada:add docker-proxy`, which sets `SENTINEL_DOCKER_HOST=tcp://docker-proxy:2375`). Never publish its port: it can control every container.
 
 ## Bot API Servers
 

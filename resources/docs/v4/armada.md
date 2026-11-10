@@ -71,7 +71,7 @@ php laragram armada:install \
 
 | Option | Values |
 | --- | --- |
-| `--with` | `mysql`, `pgsql`, `mariadb`, `mongodb`, `redis`, `valkey`, `memcached`, or `none` |
+| `--with` | `mysql`, `pgsql`, `mariadb`, `mongodb`, `redis`, `valkey`, `memcached`, `docker-proxy`, or `none` |
 | `--bot-api` | `cloud`, `official`, or `laragram` |
 | `--server` | `serve` or `surge`. Defaults to `surge` when Surge is installed. |
 | `--updates` | `polling` or `webhook` |
@@ -320,6 +320,15 @@ ARMADA_PROCESSES=queue,schedule,watchdog
 
 During installation, Armada only offers the processes that match the packages your project has installed.
 
+Supervisor runs these processes, so you may inspect and control them with `supervisorctl` inside the application container:
+
+```shell
+armada root-shell
+
+supervisorctl status
+supervisorctl restart queue
+```
+
 > [!NOTE]
 > `php laragram dev` is not needed under Armada. It binds to `localhost` inside the container, while the processes above already run the same commands.
 
@@ -350,6 +359,17 @@ Telegram only opens Mini Apps over HTTPS, so testing inside the Telegram client 
 ### Sentinel
 
 Add `sentinel-check` to record server metrics, and `sentinel-queue` when your application uses a Redis queue. Do not combine `sentinel-queue` with `queue`.
+
+Sentinel's [Armada page](/v4/sentinel#armada) shows every container of your project, their health, resource usage, and logs, and lets you start, stop, and restart containers and background processes. It reaches the Docker daemon through the `docker-proxy` service, a [socket proxy](https://github.com/Tecnativa/docker-socket-proxy) that only allows what the page needs:
+
+```shell
+php laragram armada:add docker-proxy
+```
+
+Adding the service sets `SENTINEL_DOCKER_HOST` to `tcp://docker-proxy:2375` in your `.env` file.
+
+> [!WARNING]
+> Anything that can reach the `docker-proxy` service can restart your containers and run commands in them. Keep it on Armada's internal network, never publish its port, and protect the Sentinel dashboard with its [authorization](/v4/sentinel#dashboard-authorization) in production.
 
 <a name="interacting-with-databases"></a>
 ## Interacting With Databases

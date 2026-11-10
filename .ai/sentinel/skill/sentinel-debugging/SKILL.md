@@ -26,6 +26,7 @@ Sentinel is the bot's recorder: every update it handled, with the Bot API calls,
 5. To reproduce, replay the recorded update in **dry** mode, or compose one in the playground; the dashboard then shows exactly which calls your current code makes.
 6. When the dashboard is missing webhook history, server charts or alerts, `sentinel:check` is not running — say so instead of hunting for a bug.
 7. With a local Bot API server, open the **API Server** page (its `--http-stat-port` statistics: requests, updates and errors per second, pending updates per bot, CPU, memory) before blaming Telegram for slow or missing updates. It reads `bot.api_server.stat` or `SENTINEL_API_SERVER_STATS_URL`; never paste the raw statistics page anywhere, it contains bot tokens.
+8. Under Armada, open the **Armada** page before guessing why a service misbehaves: container state and health checks, restarts, CPU and memory, the logs of each service, and the Supervisor processes (queue, scheduler…) of the application container. Restarting a container or process from it reaches the running application: ask first.
 
 ## What to Change, and Where
 

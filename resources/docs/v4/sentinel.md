@@ -21,6 +21,7 @@
     - [API Calls](#api-calls)
     - [Servers and Network](#servers-and-network)
     - [API Server](#api-server)
+    - [Armada](#armada)
 - [Queues](#queues)
     - [Running the Queue Supervisor](#running-the-queue-supervisor)
     - [Supervisors and Balancing](#supervisors-and-balancing)
@@ -289,6 +290,29 @@ SENTINEL_API_SERVER_STATS_URL=http://10.0.0.5:8082
 
 `sentinel:check` records the statistics with each webhook snapshot, so traffic, CPU, memory and per-bot updates are charted over the selected period, and the last snapshot stays visible while the server is unreachable.
 
+<a name="armada"></a>
+### Armada
+
+When your application runs with [LaraGram Armada](/v4/armada), the **Armada** page shows every container of the project: its state and health, CPU and memory usage, network traffic, published ports, and restarts. A service declared in your `compose.yaml` without a container is pointed out, and the processes Supervisor runs next to your server, such as the queue worker and the scheduler, are listed with their state.
+
+Selecting a service opens its details: the last health checks, the environment with its secrets hidden, mounts and networks, and the latest lines of its logs. Containers and processes may be started, stopped and restarted from both pages.
+
+Sentinel talks to the Docker daemon directly. Under Armada, add the `docker-proxy` service, which sets `SENTINEL_DOCKER_HOST` for you:
+
+```shell
+php laragram armada:add docker-proxy
+```
+
+When Sentinel runs on the host instead, it uses the Docker socket, which the user running it must be allowed to read. You may point it at another daemon, name the compose project when it can't be detected, or turn the actions off:
+
+```ini
+SENTINEL_DOCKER_HOST=unix:///var/run/docker.sock
+SENTINEL_ARMADA_PROJECT=example-app
+SENTINEL_ARMADA_ACTIONS=false
+```
+
+`sentinel:check` records the CPU and memory of each service, so they are charted over the selected period, and sends a [Telegram alert](#telegram-alerts) when a container stops, keeps restarting, or turns unhealthy. Set `SENTINEL_ARMADA=false` to turn the page off.
+
 <a name="queues"></a>
 ## Queues
 
@@ -527,7 +551,7 @@ Sentinel::metric('payment', $plan, $amount, ['count', 'sum']);
 <a name="telegram-alerts"></a>
 ## Telegram Alerts
 
-Sentinel can message you on Telegram when something needs attention: an exception was thrown, the webhook started failing, updates are piling up, a job failed, a queue is waiting too long, or Telegram flood-limited the bot.
+Sentinel can message you on Telegram when something needs attention: an exception was thrown, the webhook started failing, updates are piling up, a job failed, a queue is waiting too long, Telegram flood-limited the bot, or an [Armada](#armada) container stopped or turned unhealthy.
 
 ```ini
 SENTINEL_ALERTS=true
