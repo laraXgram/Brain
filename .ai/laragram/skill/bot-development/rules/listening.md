@@ -51,6 +51,10 @@ Bot::match(['TEXT', 'COMMAND'], 'help', [HelpController::class, 'show']);
 
 Other useful verbs include `onReferral` (deep-link `/start` payloads), `onPaginate` (taps on a Telegram paginator's keyboard, see [`templates.md`](templates.md)), `onInlineQuery`, `onPreCheckoutQuery`, `onSuccessfulPayment`, `onMyChatMember`, `onChatJoinRequest`, `onWebAppData`, and entity listens such as `onUrl` or `onMention`. Search the docs (`listening` page) for the full list.
 
+## Widget Queries
+
+HTML widgets (`sendWidget`, `sendSharedWidget`) send queries back to the bot. Handle them with `Bot::onWidgetQuery` / `Bot::onSharedWidgetQuery`, or narrow by kind with `Bot::onWidgetQueryType('data' | 'sign_data' | 'sent_transaction', ...)`. Read the query with `widget_query()` / `shared_widget_query()`, and always answer it with `answerWidgetQuery(widget_query_id, data)`, or the widget waits for nothing.
+
 ## Listen Parameters
 
 Capture parts of the text or callback data with `{param}` segments (`{param?}` for optional ones). Parameters are injected by position after type-hinted dependencies. Constrain them instead of validating by hand:
