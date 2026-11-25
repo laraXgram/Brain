@@ -8,6 +8,7 @@
 - [Takeout & Export](#takeout-export)
 - [Stars & Gifts](#stars-gifts)
 - [Ephemeral Messages](#ephemeral-messages)
+- [AI Compose & Transcription](#ai-compose)
 - [Bot Controls](#bot-controls)
 - [Using Other Bots](#using-other-bots)
 - [Wallet & TON Connect](#wallet-ton-connect)
@@ -166,6 +167,24 @@ $request->deleteStarGift(gift: $giftId);
 $rates = $request->getCurrencyRates(); // ['USD' => 0.013, 'TON' => ..., ...]
 ```
 
+Collectibles can also be traded on the TON blockchain. Prices are in nanotons, and the sale and offer methods return the payload or transaction the user signs with their TON wallet. Offers are answered or withdrawn by the id of the service message that carries them:
+
+```php
+$payload = $request->buyStarGiftOnchain(slug: 'PlushPepe-42', expectedAmount: 5_000_000_000);
+$request->updateStarGiftOnchainPrice(slug: 'PlushPepe-42', amount: 7_000_000_000);
+$request->cancelStarGiftOnchainSale(slug: 'PlushPepe-42');
+
+$transaction = $request->sendStarGiftOnchainOffer(slug: 'PlushPepe-42', amount: 4_000_000_000, duration: 86400);
+$request->answerStarGiftOnchainOffer(offerMsgId: 321, accept: false);
+$request->cancelStarGiftOnchainOffer(offerMsgId: 321);
+```
+
+Stars (or, with `ton: true`, TON) revenue of a bot or channel may be withdrawn straight to the connected wallet. Leave `amount` out to withdraw everything:
+
+```php
+$request->withdrawRevenueToWallet(peer: '@channel', password: 'my 2FA password', ton: true);
+```
+
 Walk transaction history and saved gifts lazily:
 
 ```php
@@ -189,6 +208,23 @@ $request->editEphemeral(peer: $chatId, receiver: '@user', id: $sent['id'], param
 $request->deleteEphemeral(/* ... */);
 ```
 
+<a name="ai-compose"></a>
+## AI Compose & Transcription
+
+Telegram can rewrite, proofread, emojify, or translate a rich message with AI, and remember a default style per chat:
+
+```php
+$result = $request->composeRichMessageWithAI(
+    text: ['_' => 'inputRichMessageMarkdown', 'text' => 'hello wrld'],
+    params: ['proofread' => true],
+);
+
+$request->setAiComposeStyle(peer: '@friend', style: ['emojify' => true, 'to_lang' => 'fa']);
+$request->setAiComposeStyle(peer: '@friend'); // Clear the style...
+
+$models = $request->getTranscriptionModels(); // On-device speech recognition models
+```
+
 <a name="bot-controls"></a>
 ## Bot Controls
 
@@ -210,6 +246,17 @@ $request->setDefaultAdminRights(rights: ['delete_messages' => true]);
 $request->checkBotUsername(username: 'shop_helper_bot', additional: true);
 $request->addBotUsername(bot: '@shop_bot', username: 'shop_helper_bot');
 $request->removeBotUsername(bot: '@shop_bot', username: 'shop_helper_bot');
+
+// The settings BotFather manages, by their Bot API names (or raw bots.setBotSettings flags)
+$request->setBotSettings(settings: [
+    'supports_inline_queries' => true,
+    'inline_query_placeholder' => 'Search products...',
+    'can_join_groups' => false,
+    'callback_query_mode' => 'inline',
+]);
+
+// Invite up to 10 users to the private chat with a bot you own
+$request->inviteUsersToBot(bot: '@shop_bot', users: ['@alice', '@bob']);
 
 // Verifier bots: verify a peer with a custom description, or remove it
 $request->setCustomVerification(peer: '@partner_channel', description: 'Official partner');

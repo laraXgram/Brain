@@ -129,6 +129,13 @@ $public = $request->getWidgetPublicData(peer: $chatId, msgId: 120);     // wait 
 - `Client::onWidgetQuery` covers message, inline and shared-copy queries. Branch on `$request->query_type['_']`. Copy queries have no chat, so `chatId()` is null.
 - Build non-default queries with `LaraGram\MTProto\Foundation\WidgetQuery` (`data(withWallet:)`, `signData()`, `sentTransaction()`, `wallet()`). Inline results use `InputMedia::inlineWidget()` / `inlineSharedWidget()` as `send_message`.
 
+## On-chain Gifts, Bot Settings and AI Compose (layer 234)
+
+- On-chain (TON) trading of collectibles, prices in nanotons: `buyStarGiftOnchain(slug:, expectedAmount:, params: ['peer' => ..., 'message' => ...])`, `updateStarGiftOnchainPrice(slug:, amount:)`, `cancelStarGiftOnchainSale(slug:)`, `sendStarGiftOnchainOffer(slug:, amount:, duration:)`, `answerStarGiftOnchainOffer(offerMsgId:, accept:)`, `cancelStarGiftOnchainOffer(offerMsgId:)`. They return the payload or transaction the user signs with their TON wallet; never sign or send it without explicit user intent.
+- `withdrawRevenueToWallet(peer:, password:, amount: null, ton: false)` withdraws Stars (or TON) revenue to the connected wallet (2FA password).
+- `setBotSettings(settings: [...], bot: null)` changes BotFather settings by Bot API names (`supports_inline_queries`, `inline_query_placeholder`, `can_join_groups`, `has_topic_sidebar`, `callback_query_mode` = default|auto|inline, ...) or raw `bots.setBotSettings` flags. `inviteUsersToBot(bot:, users:)` invites 1-10 users to a bot you own; each gets a `messageActionBotInvite`.
+- `setAiComposeStyle(peer:, style: [...] | null)` sets or clears a chat's default AI compose style; `getTranscriptionModels(version: 0)` lists on-device speech recognition models.
+
 ## Bot Controls and Business Messages
 
 For bot sessions: `answerPreCheckout(queryId:, error:)`, `answerShipping(queryId:, options:, error:)`, `setBotCommands(commands: [...])`, `setBotMenuButton`, `setBotInfo(params: [...])`, `setDefaultAdminRights`, extra usernames (`checkBotUsername(username:, additional: true)`, `addBotUsername(bot:, username:)`, `removeBotUsername`), and verifier bots' `setCustomVerification(peer:, description:)` / `enabled: false`. From a user session, use other bots with `sendInlineQuery(peer:, bot:, query:)` (or `inlineQuery` + `sendInlineResult`) and press inline buttons with `getCallbackAnswer(peer:, msgId:, data:)`; start one with the raw `startBot(bot:, peer:, start_param:)`. For Telegram Business connections, handle `Client::onBusinessMessage` and `Client::onBusinessConnect`. Ephemeral messages: `sendEphemeral`, `editEphemeral`, `deleteEphemeral`.
