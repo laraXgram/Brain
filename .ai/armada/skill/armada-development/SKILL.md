@@ -39,7 +39,7 @@ php laragram armada:add valkey
 php laragram armada:add --bot-api=laragram
 ```
 
-`armada:add` changes only the settings it receives. PHP versions are 8.3, 8.4, and 8.5.
+`armada:add` changes only the settings it receives. PHP versions are 8.3, 8.4, 8.5, and 8.6. Swoole has no PHP 8.6 release yet, so on 8.6 use the `serve` / `fpm` server or Surge's RoadRunner / FrankenPHP server; Armada rejects Surge on Swoole there.
 
 ## Settings in `.env`
 

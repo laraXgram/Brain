@@ -76,7 +76,7 @@ php laragram armada:install \
 | `--server` | `serve` or `surge`. Defaults to `surge` when Surge is installed. |
 | `--updates` | `polling` or `webhook` |
 | `--processes` | A comma-separated list of [processes](#background-processes), or `none` |
-| `--php` | `8.3`, `8.4`, or `8.5` |
+| `--php` | `8.3`, `8.4`, `8.5`, or `8.6` |
 | `--devcontainer` | Also create a [devcontainer](#using-devcontainers) configuration |
 
 </div>
@@ -395,6 +395,8 @@ Choose the PHP version when installing:
 ```shell
 php laragram armada:install --php=8.4
 ```
+
+Swoole has no release for PHP 8.6 yet, so the 8.6 images are built without it and Armada refuses to run [Surge](/v4/surge) on Swoole there: choose the `serve` (or, in production, `fpm`) server, use Surge's RoadRunner or FrankenPHP server, or stay on PHP 8.5. Once Swoole supports PHP 8.6, rebuilding the image installs it automatically.
 
 To change it later, update the `PHP_VERSION` argument and `image` of the `laragram.test` service in your `compose.yaml` file, then rebuild. The same `args` section accepts `NODE_VERSION` and `PHP_EXTENSIONS`, a space-separated list of additional extensions:
 
