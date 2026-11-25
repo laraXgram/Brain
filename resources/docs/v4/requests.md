@@ -154,6 +154,8 @@ LaraGram provides global helpers that read the common parts of any update, whate
 | `message()` | The message of the update. For a callback query, the message its button is attached to, which is empty for inline-mode messages. |
 | `text()` | The text of the message, or the caption of a media message. |
 | `bot_connection()` | The name of the bot connection handling the update. |
+| `inviter()` | The bot owner who invited the user to the private chat with the bot, for the `write_access_allowed` message of an invite. |
+| `bot_info()` | The bot's own information and settings from `getMe` (a `BotFullInfo`), cached for each bot connection. Pass `true` to fetch it again, for example after `setMySettings`. |
 
 </div>
 

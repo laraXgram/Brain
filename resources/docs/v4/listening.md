@@ -190,6 +190,9 @@ Bot::onWidgetQueryType($type, $action)
 Bot::onSharedWidgetQuery($action)
 Bot::onTonWalletTransfer($action)
 Bot::onPaidMessagesWaived($action)
+Bot::onWriteAccessAllowedVia($reason, $action)
+Bot::onBotInvite($action)
+Bot::onUniqueGiftOrigin($origin, $action)
 ```
 
 <a name="pagination-listens"></a>
@@ -231,6 +234,33 @@ Bot::onWidgetQueryType('sent_transaction', function (Request $request) {
     $query = widget_query() ?? shared_widget_query();
 
     // $query->type->wallet->address, $query->type->msg_hash...
+});
+```
+
+<a name="write-access-and-gift-listens"></a>
+#### Write Access and Gift Listens
+
+A `write_access_allowed` service message tells your bot why it may now message a user. The `onWriteAccessAllowedVia` method listens for one or more of those reasons: `invite` (the owner of the bot invited the user), `request`, `web_app`, or `attachment_menu`. Since bot owners can invite users to the private chat with their bot, the `onBotInvite` method is a shortcut for the `invite` reason, and the `inviter` helper returns the owner who sent the invitation:
+
+```php
+use LaraGram\Request\Request;
+
+Bot::onBotInvite(function (Request $request) {
+    $request->sendMessage(chat()->id, 'Welcome! '.inviter()->first_name.' invited you.');
+});
+
+Bot::onWriteAccessAllowedVia(['request', 'web_app'], function (Request $request) {
+    // ...
+});
+```
+
+The `onUniqueGiftOrigin` method listens for `unique_gift` service messages by the origin of the gift, such as `upgrade`, `transfer`, `resale`, `gifted_upgrade`, or `offer`. Gifts bought on the TON blockchain arrive as `resale` with `last_resale_currency` set to `TON`:
+
+```php
+Bot::onUniqueGiftOrigin(['resale', 'offer'], function (Request $request) {
+    $gift = message()->unique_gift;
+
+    // $gift->last_resale_currency, $gift->last_resale_amount...
 });
 ```
 

@@ -28,6 +28,8 @@ Use the global helpers for the common parts of any update. They work across mess
 | `callback_query()` | The callback query, when a button was pressed |
 | `text()` | The message text, or the caption of a media message |
 | `bot_connection()` | The bot connection handling the update |
+| `inviter()` | The bot owner who invited the user, on the `write_access_allowed` message of an invite |
+| `bot_info()` | The bot's own `getMe` info and settings (`BotFullInfo`), cached per connection; `bot_info(true)` refetches it after `setMySettings` |
 
 These helpers read the update currently being handled and return typed objects (`Chat`, `User`, `Message`). A part the update does not carry is an empty object of its type, never `null`, so chains such as `message()->reply_to_message->isEmpty()` or `user()->id ?? null` never fail; test presence with `isset()`, `filled()` / `blank()` or `??`, never with `=== null`. In jobs, commands, and scheduled tasks there is no update, so they are empty — pass ids explicitly there.
 

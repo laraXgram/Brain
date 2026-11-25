@@ -55,6 +55,10 @@ Other useful verbs include `onReferral` (deep-link `/start` payloads), `onPagina
 
 HTML widgets (`sendWidget`, `sendSharedWidget`) send queries back to the bot. Handle them with `Bot::onWidgetQuery` / `Bot::onSharedWidgetQuery`, or narrow by kind with `Bot::onWidgetQueryType('data' | 'sign_data' | 'sent_transaction', ...)`. Read the query with `widget_query()` / `shared_widget_query()`, and always answer it with `answerWidgetQuery(widget_query_id, data)`, or the widget waits for nothing.
 
+## Write Access and Gift Origins
+
+Narrow `write_access_allowed` service messages by why the bot may now write to the user with `Bot::onWriteAccessAllowedVia('invite' | 'request' | 'web_app' | 'attachment_menu', ...)`. `Bot::onBotInvite` is the `invite` case (the bot owner invited the user, Bot API 10.5), and `inviter()` returns that owner. Narrow `unique_gift` messages by origin with `Bot::onUniqueGiftOrigin('upgrade' | 'transfer' | 'resale' | 'gifted_upgrade' | 'offer', ...)`; on-chain purchases arrive as `resale` with `last_resale_currency` `TON`. `Bot::onRichMessageType` also matches blocks nested inside quotes, details, and list items.
+
 ## Listen Parameters
 
 Capture parts of the text or callback data with `{param}` segments (`{param?}` for optional ones). Parameters are injected by position after type-hinted dependencies. Constrain them instead of validating by hand:
