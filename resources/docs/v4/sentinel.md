@@ -240,7 +240,7 @@ The Bot API calls, logs, queries and exceptions an update caused carry the same 
 <a name="chat-preview-and-replay"></a>
 ### Chat Preview and Replay
 
-Each update is replayed as a Telegram chat: what the user sent and what the bot answered, with inline keyboards and formatting rendered the way Telegram renders them. Any recorded update may also be **replayed** through your current code to reproduce a bug — as a dry run, or live when `SENTINEL_PLAYGROUND_LIVE` allows it.
+Each update is replayed as a Telegram chat: what the user sent and what the bot answered, with inline keyboards and formatting rendered the way Telegram renders them. The **Formatted** / **Raw** switch above the chat shows message text either formatted (HTML, MarkdownV2, Markdown, or message entities, the default) or exactly as it was sent, together with its parse mode; the choice is remembered. Premium (custom) emoji, in text and as button icons, are highlighted with an animated effect, and button `style` colors are shown as Telegram shows them. Any recorded update may also be **replayed** through your current code to reproduce a bug — as a dry run, or live when `SENTINEL_PLAYGROUND_LIVE` allows it.
 
 <a name="the-playground"></a>
 ### The Playground
